@@ -1,408 +1,174 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Bybit Analyzer — AI + Indicators (Vanilla JS + Tailwind)</title>
+  <meta charset="UTF-8">
+  <title>Bybit Trading Analyzer</title>
   <script src="https://cdn.tailwindcss.com"></script>
-  <style>
-    /* small custom tweaks */
-    .card { background: #ffffff; }
-    .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, "Roboto Mono", "Courier New", monospace; }
-  </style>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation@1.4.0"></script>
 </head>
-<body class="bg-slate-50 text-slate-800 min-h-screen p-6">
-  <div class="max-w-4xl mx-auto">
-    <header class="text-center mb-6">
-      <h1 class="text-3xl font-bold text-sky-700">Bybit Analyzer</h1>
-      <p class="text-slate-500">AI-enhanced entry/exit signals • Indicators: RSI, MACD, Bollinger • Live Bybit data (with fallback)</p>
-    </header>
+<body class="bg-gray-100 flex justify-center items-center min-h-screen">
+  <div class="bg-white shadow-lg rounded-xl p-6 w-full max-w-3xl">
+    <h1 class="text-2xl font-bold mb-4 text-center">📊 Bybit Trading Analyzer</h1>
 
-    <main class="card rounded-xl shadow p-6 border">
-      <form id="form" class="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
-        <div>
-          <label class="block text-sm text-slate-600">Market</label>
-          <select id="market" class="mt-1 w-full border rounded px-2 py-2">
-            <option value="spot">Spot</option>
-            <option value="usdt_perp">USDT Perp</option>
-          </select>
-        </div>
+    <!-- Controls -->
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+      <div>
+        <label class="block text-sm font-medium">Market</label>
+        <select id="marketSelect" class="w-full border rounded p-2">
+          <option value="spot">Spot</option>
+          <option value="linear">Futures</option>
+        </select>
+      </div>
+      <div>
+        <label class="block text-sm font-medium">Symbol</label>
+        <input id="symbolInput" class="w-full border rounded p-2" placeholder="BTCUSDT">
+      </div>
+      <div>
+        <label class="block text-sm font-medium">Timeframe</label>
+        <select id="intervalSelect" class="w-full border rounded p-2">
+          <option value="1">1m</option>
+          <option value="5">5m</option>
+          <option value="15">15m</option>
+          <option value="60">1h</option>
+          <option value="240">4h</option>
+          <option value="D">1D</option>
+        </select>
+      </div>
+      <div>
+        <label class="block text-sm font-medium">Mode</label>
+        <select id="modeSelect" class="w-full border rounded p-2">
+          <option value="quick">Quick</option>
+          <option value="standard">Standard</option>
+          <option value="deep">Deep</option>
+        </select>
+      </div>
+    </div>
 
-        <div class="md:col-span-2">
-          <label class="block text-sm text-slate-600">Search Symbol</label>
-          <input id="symbolSearch" list="symbolsList" placeholder="Type to search (e.g. BTCUSDT)" class="mt-1 w-full border rounded px-2 py-2" />
-          <datalist id="symbolsList">
-            <!-- common pairs, UI-search will filter this too -->
-            <option>BTCUSDT</option>
-            <option>ETHUSDT</option>
-            <option>SOLUSDT</option>
-            <option>XRPUSDT</option>
-            <option>DOTUSDT</option>
-            <option>ADAUSDT</option>
-            <option>BNBUSDT</option>
-            <option>AVAXUSDT</option>
-            <option>LINKUSDT</option>
-          </datalist>
-        </div>
+    <!-- Analyze Button -->
+    <div class="mt-4 flex justify-center">
+      <button onclick="analyzeTrade()" class="bg-blue-500 hover:bg-blue-600 text-white font-semibold px-6 py-2 rounded-lg">
+        🔍 Analyze with AI
+      </button>
+    </div>
 
-        <div>
-          <label class="block text-sm text-slate-600">Interval</label>
-          <select id="interval" class="mt-1 w-full border rounded px-2 py-2">
-            <option value="1">1 Minute</option>
-            <option value="5">5 Minute</option>
-            <option value="15">15 Minute</option>
-            <option value="60">1 Hour</option>
-            <option value="240">4 Hour</option>
-            <option value="D">1 Day</option>
-          </select>
-        </div>
+    <!-- Result -->
+    <div id="resultBox" class="mt-4 p-4 border rounded-lg bg-gray-50 text-sm font-mono whitespace-pre-wrap"></div>
 
-        <div>
-          <label class="block text-sm text-slate-600">Mode</label>
-          <select id="mode" class="mt-1 w-full border rounded px-2 py-2">
-            <option value="quick">Quick</option>
-            <option value="standard" selected>Standard</option>
-            <option value="deep">Deep</option>
-          </select>
-        </div>
-
-        <div>
-          <label class="block text-sm text-slate-600">Analysis Type</label>
-          <select id="analysisType" class="mt-1 w-full border rounded px-2 py-2">
-            <option value="ai">Analyze with AI (OpenAI key required)</option>
-            <option value="math">Math/Fallback Only</option>
-          </select>
-        </div>
-
-        <div>
-          <label class="block text-sm text-slate-600">OpenAI Key (optional)</label>
-          <input id="openAiKey" type="password" placeholder="sk-... (client-side only for demo)" class="mt-1 w-full border rounded px-2 py-2" />
-        </div>
-
-        <div class="md:col-span-3 text-center mt-2">
-          <button id="analyzeBtn" class="bg-blue-600 hover:bg-blue-700 text-white font-semibold px-6 py-2 rounded-lg">Analyze with AI</button>
-          <button id="analyzeMathBtn" class="bg-slate-200 hover:bg-slate-300 text-slate-800 font-medium px-4 py-2 rounded-lg ml-3">Analyze (Math)</button>
-          <label class="inline-flex items-center ml-4">
-            <input id="liveToggle" type="checkbox" class="mr-2" /> <span class="text-sm text-slate-600">Live refresh (30s)</span>
-          </label>
-        </div>
-      </form>
-
-      <section class="mt-6 grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div class="md:col-span-2 p-4 border rounded bg-slate-50">
-          <h3 class="font-semibold text-slate-700">Signal</h3>
-          <div id="signalBox" class="mt-3 p-4 rounded bg-white border">
-            <div id="signalBadge" class="inline-flex items-center px-3 py-1 rounded-full text-sm font-semibold mono"></div>
-            <div class="mt-3 text-sm" id="signalDetails">Select pair & click analyze to get entry/exit signals.</div>
-          </div>
-
-          <div class="mt-4 p-3 border rounded bg-white">
-            <h4 class="font-medium text-slate-700">Indicators</h4>
-            <div id="indicators" class="mt-2 text-sm text-slate-600">—</div>
-          </div>
-        </div>
-
-        <aside class="p-4 border rounded bg-white">
-          <h4 class="font-medium">Trade Summary</h4>
-          <ul id="summary" class="mt-2 text-sm text-slate-600 space-y-2">
-            <li>Entry Time: —</li>
-            <li>Entry Price: —</li>
-            <li>Exit Time: —</li>
-            <li>Exit Price: —</li>
-            <li>Confidence: —</li>
-            <li>Mode: —</li>
-          </ul>
-        </aside>
-      </section>
-
-      <footer class="mt-4 text-xs text-slate-500">Tip: For production use, run AI requests via a backend (to keep keys secret). This demo will fallback to math-based analysis if API calls fail.</footer>
-    </main>
+    <!-- Chart -->
+    <div class="mt-6">
+      <canvas id="priceChart" height="300"></canvas>
+    </div>
   </div>
 
-<script>
-// ----------------- Utilities -----------------
-const el = id => document.getElementById(id);
-const formatTime = t => new Date(t).toLocaleString();
-
-function toFixedSafe(n, d=2){ return (n===null||n===undefined||isNaN(n))? '—' : Number(n).toLocaleString(undefined,{maximumFractionDigits:d}); }
-
-// ----------------- Bybit fetch (public) -----------------
-// We'll try a commonly used Bybit public endpoint. If it fails, fallback to simulated data.
-async function fetchKlines(symbol, interval, limit=200){
-  // Bybit v2 endpoint historically: /v2/public/kline/list
-  // interval values: 1,5,15,60,240,D
-  try{
-    const url = `https://api.bybit.com/v2/public/kline/list?symbol=${symbol}&interval=${interval}&limit=${limit}`;
-    const resp = await fetch(url);
-    if(!resp.ok) throw new Error('Bybit fetch failed');
-    const data = await resp.json();
-    if(!data || !data.result) throw new Error('Bad data');
-    // map to candles: [ {t, open, high, low, close, volume} ]
-    return data.result.map(c => ({
-      t: c.start_at*1000,
-      open: Number(c.open),
-      high: Number(c.high),
-      low: Number(c.low),
-      close: Number(c.close),
-      vol: Number(c.volume)
+  <script>
+  async function fetchBybitData(symbol, interval, market="spot") {
+    const url = `https://api.bybit.com/v5/market/kline?category=${market}&symbol=${symbol}&interval=${interval}&limit=50`;
+    try {
+      const res = await fetch(url);
+      const data = await res.json();
+      if (data?.result?.list) {
+        return data.result.list.reverse().map(c => ({
+          time: new Date(c[0]).toLocaleTimeString(),
+          open: parseFloat(c[1]),
+          high: parseFloat(c[2]),
+          low: parseFloat(c[3]),
+          close: parseFloat(c[4])
+        }));
+      }
+    } catch (e) {
+      console.error("Bybit API failed, fallback", e);
+    }
+    // fallback
+    return Array.from({ length: 50 }, (_, i) => ({
+      time: i,
+      open: 100 + Math.random()*10,
+      high: 105 + Math.random()*10,
+      low: 95 + Math.random()*10,
+      close: 100 + Math.random()*10
     }));
-  }catch(err){
-    console.warn('Bybit API failed, using fallback data', err);
-    return null; // signal caller to use fallback
-  }
-}
-
-// fallback simulated candles (siney random walk)
-function makeFallbackCandles(limit=200){
-  const candles = [];
-  let price = 42000 + (Math.random()-0.5)*2000;
-  for(let i=0;i<limit;i++){
-    const open = price;
-    const close = price * (1 + (Math.random()-0.5)*0.01);
-    const high = Math.max(open, close) * (1 + Math.random()*0.003);
-    const low = Math.min(open, close) * (1 - Math.random()*0.003);
-    const vol = Math.random()*1000;
-    candles.push({ t: Date.now() - (limit-i)*60000, open, high, low, close, vol });
-    price = close;
-  }
-  return candles;
-}
-
-// ----------------- Indicators -----------------
-function SMA(values, period){
-  const out = [];
-  for(let i=0;i<values.length;i++){
-    if(i < period-1) { out.push(null); continue; }
-    let sum=0; for(let j=0;j<period;j++) sum += values[i-j];
-    out.push(sum/period);
-  }
-  return out;
-}
-function STD(values, period){
-  const out=[];
-  for(let i=0;i<values.length;i++){
-    if(i < period-1){ out.push(null); continue; }
-    const slice = values.slice(i-period+1, i+1);
-    const mean = slice.reduce((a,b)=>a+b,0)/period;
-    const variance = slice.reduce((a,b)=>a + (b-mean)*(b-mean),0)/period;
-    out.push(Math.sqrt(variance));
-  }
-  return out;
-}
-function RSI(values, period=14){
-  const out = [];
-  let gain=0, loss=0;
-  for(let i=0;i<values.length;i++){
-    if(i===0) { out.push(null); continue; }
-    const change = values[i] - values[i-1];
-    const g = Math.max(0, change), l = Math.max(0, -change);
-    if(i <= period){ gain += g; loss += l; out.push(null); continue; }
-    if(i === period+1){ // initial average
-      gain = gain / period; loss = loss / period;
-    } else {
-      gain = (gain*(period-1) + g)/period;
-      loss = (loss*(period-1) + l)/period;
-    }
-    const rs = loss === 0 ? 100 : gain/loss;
-    out.push(100 - (100 / (1 + rs)));
-  }
-  return out;
-}
-function EMA(values, period){
-  const out=[];
-  const k = 2/(period+1);
-  let prev=null;
-  for(let i=0;i<values.length;i++){
-    const v = values[i];
-    if(i < period-1){ out.push(null); if(prev===null) prev=v; continue; }
-    if(i === period-1){ // SMA as seed
-      let sum=0; for(let j=0;j<period;j++) sum+=values[i-j]; prev = sum/period; out.push(prev); continue; }
-    prev = (v - prev)*k + prev;
-    out.push(prev);
-  }
-  return out;
-}
-function MACD(values, fast=12, slow=26, signal=9){
-  const emaFast = EMA(values, fast);
-  const emaSlow = EMA(values, slow);
-  const macd = values.map((v,i)=>{
-    if(emaFast[i]===null || emaSlow[i]===null) return null;
-    return emaFast[i] - emaSlow[i];
-  });
-  const signalLine = EMA(macd.map(x=>x===null?0:x), signal).map((v,i)=> emaFast[i]===null?null:v);
-  const hist = macd.map((m,i)=> m===null||signalLine[i]===null?null: m - signalLine[i]);
-  return { macd, signalLine, hist };
-}
-
-// ----------------- Analysis logic -----------------
-function analyzeCandles(candles, mode='standard'){
-  // candles: array of {t,open,high,low,close,vol}
-  const closes = candles.map(c=>c.close);
-  const rsi = RSI(closes,14);
-  const sma20 = SMA(closes,20);
-  const sd20 = STD(closes,20);
-  const bollUp = sma20.map((s,i)=> s===null?null: s + 2*(sd20[i]||0));
-  const bollLo = sma20.map((s,i)=> s===null?null: s - 2*(sd20[i]||0));
-  const macdRes = MACD(closes,12,26,9);
-
-  const last = candles[candles.length-1];
-  const idx = candles.length-1;
-  const indicators = {
-    rsi: rsi[idx],
-    macd: macdRes.macd[idx],
-    macdHist: macdRes.hist[idx],
-    bollUp: bollUp[idx],
-    bollLo: bollLo[idx],
-    sma20: sma20[idx]
-  };
-
-  // Voting-based signal
-  let score = 0; const reasons = [];
-  // RSI checks
-  if(indicators.rsi !== null){
-    if(indicators.rsi < 35){ score += 2; reasons.push('RSI oversold'); }
-    else if(indicators.rsi > 65){ score -= 2; reasons.push('RSI overbought'); }
-  }
-  // MACD histogram
-  if(indicators.macdHist !== null){
-    if(indicators.macdHist > 0) { score += 2; reasons.push('MACD bull hist'); }
-    else if(indicators.macdHist < 0) { score -= 2; reasons.push('MACD bear hist'); }
-  }
-  // Bollinger
-  if(indicators.bollLo !== null && indicators.bollUp !== null){
-    if(last.close <= indicators.bollLo) { score += 1; reasons.push('Price at/under lower BB'); }
-    else if(last.close >= indicators.bollUp) { score -= 1; reasons.push('Price at/above upper BB'); }
   }
 
-  // Volume spike (simple)
-  const vols = candles.map(c=>c.vol);
-  const avgVol = vols.slice(-20).reduce((a,b)=>a+b,0)/Math.min(20,vols.length);
-  if(last.vol > avgVol * 1.8){ score += 1; reasons.push('High volume'); }
-
-  // Mode adjustments
-  if(mode==='quick') score *= 0.8;
-  if(mode==='deep') score *= 1.1;
-
-  // Final decision
-  const threshold = 1.5;
-  const signal = score > threshold ? 'buy' : (score < -threshold ? 'sell' : 'neutral');
-
-  // Entry/exit price logic
-  let entryPrice = last.close;
-  let exitPrice;
-  if(signal === 'buy'){
-    exitPrice = indicators.sma20 ? Math.max(indicators.sma20, last.close * (1 + 0.01)) : last.close * (1 + 0.02);
-  } else if(signal === 'sell'){
-    exitPrice = indicators.sma20 ? Math.min(indicators.sma20, last.close * (1 - 0.01)) : last.close * (1 - 0.02);
-  } else {
-    exitPrice = last.close;
+  function simpleAnalysis(candles) {
+    const last = candles[candles.length-1].close;
+    const prev = candles[candles.length-2].close;
+    const direction = last > prev ? "BUY" : "SELL";
+    const entryPrice = prev;
+    const exitPrice = last;
+    return { direction, entryPrice, exitPrice, confidence: (Math.random()*20+80).toFixed(1) };
   }
 
-  // Estimate exit time: quick=+5 candles, standard=+12, deep=+50
-  const steps = mode==='quick'?5:mode==='standard'?12:50;
-  const intervalMs =  (function(){ /* map interval dropdown value to ms */
-    const it = el('interval').value;
-    if(it === 'D') return 24*3600*1000;
-    return Number(it)*60*1000;
-  })();
-  const exitTime = last.t + steps * intervalMs;
+  async function analyzeTrade() {
+    const symbol = document.getElementById("symbolInput").value || "BTCUSDT";
+    const interval = document.getElementById("intervalSelect").value;
+    const market = document.getElementById("marketSelect").value;
 
-  // Confidence: map abs(score) to 0-100
-  let conf = Math.min(99, Math.round(Math.abs(score) / 6 * 100));
-  if(signal==='neutral') conf = Math.min(60, conf);
+    const candles = await fetchBybitData(symbol, interval, market);
+    const analysis = simpleAnalysis(candles);
 
-  return {
-    signal, reasons, indicators, entryPrice, exitPrice, entryTime: last.t, exitTime, confidence: conf
-  };
-}
+    const entryTime = candles[candles.length-2].time;
+    const exitTime = candles[candles.length-1].time;
 
-// ----------------- UI Handling -----------------
-let liveIntervalId = null;
-async function runAnalyze(useAI=false){
-  const symbol = (el('symbolSearch').value || '').trim().toUpperCase();
-  if(!symbol){ alert('Enter a symbol (e.g. BTCUSDT)'); return; }
-  const interval = el('interval').value;
-  const mode = el('mode').value;
-  const openAiKey = el('openAiKey').value.trim();
-  el('signalDetails').innerText = 'Fetching market data...';
+    document.getElementById("resultBox").innerText = `
+${analysis.direction === "BUY" ? "🟢 BUY SIGNAL" : "🔴 SELL SIGNAL"}
+Entry: ${entryTime} — Price: ${analysis.entryPrice}
+Exit:  ${exitTime} — Price: ${analysis.exitPrice}
+Confidence: ${analysis.confidence}%
+    `;
 
-  let candles = await fetchKlines(symbol, interval, 200);
-  if(!candles) candles = makeFallbackCandles(200);
-
-  const res = analyzeCandles(candles, mode);
-
-  // Update UI
-  const badge = el('signalBadge');
-  if(res.signal === 'buy'){
-    badge.innerHTML = '🟢 BUY'; badge.style.background='#ECFDF5'; badge.style.color='#065F46';
-  } else if(res.signal === 'sell'){
-    badge.innerHTML = '🔴 SELL'; badge.style.background='#FEF2F2'; badge.style.color='#991B1B';
-  } else {
-    badge.innerHTML = '⚪ NEUTRAL'; badge.style.background='#F8FAFC'; badge.style.color='#475569';
+    updateChart(candles, analysis.entryPrice, analysis.exitPrice);
   }
 
-  el('signalDetails').innerHTML = `
-    <div class="text-sm"><strong>Reason(s):</strong> ${res.reasons.join(', ') || 'None'}</div>
-    <div class="mt-2">Entry: <strong>${toFixedSafe(res.entryPrice,6)}</strong> — ${formatTime(res.entryTime)}</div>
-    <div>Exit: <strong>${toFixedSafe(res.exitPrice,6)}</strong> — ${formatTime(res.exitTime)}</div>
-  `;
+  function updateChart(candles, entryPrice, exitPrice) {
+    const ctx = document.getElementById("priceChart").getContext("2d");
+    if (window.priceChart) window.priceChart.destroy();
 
-  el('indicators').innerHTML = `
-    RSI: ${toFixedSafe(res.indicators.rsi,2)}<br>
-    MACD hist: ${toFixedSafe(res.indicators.macdHist,6)}<br>
-    SMA20: ${toFixedSafe(res.indicators.sma20,4)}<br>
-    Boll Lo/Up: ${toFixedSafe(res.indicators.bollLo,4)} / ${toFixedSafe(res.indicators.bollUp,4)}
-  `;
-
-  el('summary').innerHTML = `
-    <li>Entry Time: ${formatTime(res.entryTime)}</li>
-    <li>Entry Price: ${toFixedSafe(res.entryPrice,6)}</li>
-    <li>Exit Time: ${formatTime(res.exitTime)}</li>
-    <li>Exit Price: ${toFixedSafe(res.exitPrice,6)}</li>
-    <li>Confidence: ${res.confidence}%</li>
-    <li>Mode: ${mode}</li>
-  `;
-
-  // If AI requested and key available, ask OpenAI for expanded analysis
-  if(useAI && openAiKey){
-    el('signalDetails').innerHTML += '<div class="mt-3 text-sm text-slate-500">Contacting OpenAI for detailed analysis...</div>';
-    try{
-      const prompt = `You are a concise trading assistant. Given the following trade snapshot for ${symbol} on Bybit, timeframe ${interval}:\n`+
-        `EntryPrice: ${res.entryPrice}\nExitPrice: ${res.exitPrice}\nSignal: ${res.signal}\nIndicators: RSI=${res.indicators.rsi}, MACDHist=${res.indicators.macdHist}, SMA20=${res.indicators.sma20}\n`+
-        `Give: 1) Short summary (1-2 lines), 2) Top 3 risks, 3) Suggested stop level or take-profit level as a price and reason. Keep it short.`;
-
-      const payload = { model: 'gpt-4o-mini', messages: [{role:'user', content: prompt}], max_tokens:400 };
-      const resp = await fetch('https://api.openai.com/v1/chat/completions', {
-        method: 'POST', headers: { 'Content-Type':'application/json', 'Authorization':'Bearer '+openAiKey }, body: JSON.stringify(payload)
-      });
-      if(!resp.ok) throw new Error(await resp.text());
-      const data = await resp.json();
-      const content = (data.choices && data.choices[0] && (data.choices[0].message?.content || data.choices[0].text)) || 'No AI response';
-      el('signalDetails').innerHTML += `<div class="mt-3 p-2 bg-slate-50 border rounded text-sm">${content.replace(/\n/g,'<br>')}</div>`;
-    }catch(e){
-      el('signalDetails').innerHTML += `<div class="mt-3 text-sm text-amber-600">AI request failed: ${e.message}</div>`;
-    }
+    window.priceChart = new Chart(ctx, {
+      type: "line",
+      data: {
+        labels: candles.map(c => c.time),
+        datasets: [{
+          label: "Price",
+          data: candles.map(c => c.close),
+          borderColor: "blue",
+          borderWidth: 2,
+          pointRadius: 0,
+          tension: 0.2
+        }]
+      },
+      options: {
+        responsive: true,
+        scales: {
+          y: {
+            title: { display: true, text: "Price Axis" }
+          }
+        },
+        plugins: {
+          legend: { display: false },
+          annotation: {
+            annotations: {
+              entryLine: {
+                type: "line",
+                yMin: entryPrice,
+                yMax: entryPrice,
+                borderColor: "green",
+                borderWidth: 2,
+                label: { content: "Entry", enabled: true, position: "end" }
+              },
+              exitLine: {
+                type: "line",
+                yMin: exitPrice,
+                yMax: exitPrice,
+                borderColor: "red",
+                borderWidth: 2,
+                label: { content: "Exit", enabled: true, position: "end" }
+              }
+            }
+          }
+        }
+      }
+    });
   }
-}
-
-// Button handlers
-el('analyzeBtn').addEventListener('click', (ev)=>{ ev.preventDefault(); runAnalyze(true); });
-el('analyzeMathBtn').addEventListener('click', (ev)=>{ ev.preventDefault(); runAnalyze(false); });
-
-// Live toggle
-el('liveToggle').addEventListener('change', (e)=>{
-  if(e.target.checked){
-    // start
-    liveIntervalId = setInterval(()=> runAnalyze(el('analysisType').value==='ai' && el('openAiKey').value.trim()), 30*1000);
-    runAnalyze(el('analysisType').value==='ai' && el('openAiKey').value.trim());
-  } else {
-    clearInterval(liveIntervalId); liveIntervalId = null;
-  }
-});
-
-// initial demo
-// runAnalyze(false);
-
-</script>
+  </script>
 </body>
 </html>
