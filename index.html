@@ -62,32 +62,47 @@
   </div>
 
   <script>
-  async function fetchBybitData(symbol, interval, market="spot") {
-    const url = `https://api.bybit.com/v5/market/kline?category=${market}&symbol=${symbol}&interval=${interval}&limit=50`;
-    try {
-      const res = await fetch(url);
-      const data = await res.json();
-      if (data?.result?.list) {
-        return data.result.list.reverse().map(c => ({
-          time: new Date(c[0]).toLocaleTimeString(),
-          open: parseFloat(c[1]),
-          high: parseFloat(c[2]),
-          low: parseFloat(c[3]),
-          close: parseFloat(c[4])
-        }));
-      }
-    } catch (e) {
-      console.error("Bybit API failed, fallback", e);
+ async function fetchBybitData(symbol, interval, market="spot") {
+  const url = `https://api.bybit.com/v5/market/kline?category=${market}&symbol=${symbol}&interval=${interval}&limit=50`;
+  try {
+    const res = await fetch(url);
+    const data = await res.json();
+    if (data?.result?.list) {
+      return data.result.list.reverse().map(c => ({
+        // ✅ show full date + time
+        time: new Date(c[0]).toLocaleString("en-GB", {
+          year: "numeric",
+          month: "2-digit",
+          day: "2-digit",
+          hour: "2-digit",
+          minute: "2-digit",
+          second: "2-digit"
+        }),
+        open: parseFloat(c[1]),
+        high: parseFloat(c[2]),
+        low: parseFloat(c[3]),
+        close: parseFloat(c[4])
+      }));
     }
-    // fallback
-    return Array.from({ length: 50 }, (_, i) => ({
-      time: i,
-      open: 100 + Math.random()*10,
-      high: 105 + Math.random()*10,
-      low: 95 + Math.random()*10,
-      close: 100 + Math.random()*10
-    }));
+  } catch (e) {
+    console.error("Bybit API failed, fallback", e);
   }
+  // fallback
+  return Array.from({ length: 50 }, (_, i) => ({
+    time: new Date(Date.now() - (50 - i) * 60000).toLocaleString("en-GB", {
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit",
+      second: "2-digit"
+    }),
+    open: 100 + Math.random()*10,
+    high: 105 + Math.random()*10,
+    low: 95 + Math.random()*10,
+    close: 100 + Math.random()*10
+  }));
+}
 
   function simpleAnalysis(candles) {
     const last = candles[candles.length-1].close;
