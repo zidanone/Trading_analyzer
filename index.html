@@ -1183,19 +1183,37 @@ Consider current market conditions, technical indicators, and Bybit trading patt
             }
         });
 
-        // Auto-update market data every 30 seconds
+        // Auto-update market data every 15 seconds for live price
         setInterval(async () => {
             const symbol = document.getElementById('tradingPair').value;
-            if (symbol && bybitAnalyzer.lastAnalysis) {
+            if (symbol) {
                 try {
                     const marketData = await bybitAnalyzer.fetchBybitData(symbol, '1h');
                     const technicals = bybitAnalyzer.calculateTechnicalIndicators(marketData);
                     bybitAnalyzer.updateMarketDisplay(marketData, technicals);
+                    bybitAnalyzer.updateLivePriceDisplay(symbol);
+                    
+                    console.log('🔄 Live price updated:', symbol);
                 } catch (error) {
                     console.log('Background update failed:', error);
                 }
             }
-        }, 30000);
+        }, 15000); // Update every 15 seconds for more live feel
+
+        // Symbol change handler - update price immediately
+        document.getElementById('tradingPair').addEventListener('change', async function() {
+            const symbol = this.value;
+            console.log('📊 Symbol changed to:', symbol);
+            
+            try {
+                const marketData = await bybitAnalyzer.fetchBybitData(symbol, '1h');
+                const technicals = bybitAnalyzer.calculateTechnicalIndicators(marketData);
+                bybitAnalyzer.updateMarketDisplay(marketData, technicals);
+                bybitAnalyzer.updateLivePriceDisplay(symbol);
+            } catch (error) {
+                console.log('Symbol change update failed:', error);
+            }
+        });
 
         // Initialize with default data
         document.addEventListener('DOMContentLoaded', function() {
@@ -1205,9 +1223,11 @@ Consider current market conditions, technical indicators, and Bybit trading patt
             // Load initial market data
             setTimeout(async () => {
                 try {
-                    const marketData = await bybitAnalyzer.fetchBybitData('BTCUSDT', '1h');
+                    const symbol = 'BTCUSDT';
+                    const marketData = await bybitAnalyzer.fetchBybitData(symbol, '1h');
                     const technicals = bybitAnalyzer.calculateTechnicalIndicators(marketData);
                     bybitAnalyzer.updateMarketDisplay(marketData, technicals);
+                    bybitAnalyzer.updateLivePriceDisplay(symbol);
                 } catch (error) {
                     console.log('Initial data load failed:', error);
                 }
