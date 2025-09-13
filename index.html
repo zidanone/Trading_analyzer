@@ -1,814 +1,264 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Bybit AI Analyst - Smart Entry & Exit Points</title>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <style>
-        :root {
-            --primary: #1e88e5;
-            --primary-dark: #1565c0;
-            --secondary: #6c757d;
-            --success: #28a745;
-            --danger: #dc3545;
-            --warning: #ffc107;
-            --dark: #343a40;
-            --light: #f8f9fa;
-            --background: #0c1a33;
-            --card-bg: #132546;
-            --text: #e9ecef;
-            --border: #2a4a7e;
-        }
-        
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-        }
-        
-        body {
-            background: var(--background);
-            color: var(--text);
-            line-height: 1.6;
-            min-height: 100vh;
-            padding-bottom: 60px;
-        }
-        
-        .container {
-            width: 100%;
-            max-width: 1200px;
-            margin: 0 auto;
-            padding: 0 20px;
-        }
-        
-        header {
-            background: var(--card-bg);
-            padding: 15px 0;
-            position: sticky;
-            top: 0;
-            z-index: 100;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-            border-bottom: 1px solid var(--border);
-        }
-        
-        .header-content {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-        
-        .logo {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-        
-        .logo i {
-            color: var(--primary);
-            font-size: 28px;
-        }
-        
-        .logo h1 {
-            font-size: 24px;
-            font-weight: 700;
-            background: linear-gradient(to right, var(--primary), #00bcd4);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-        }
-        
-        nav ul {
-            display: flex;
-            list-style: none;
-            gap: 25px;
-        }
-        
-        nav a {
-            color: var(--text);
-            text-decoration: none;
-            font-weight: 500;
-            transition: color 0.3s;
-            padding: 5px 10px;
-            border-radius: 4px;
-        }
-        
-        nav a:hover {
-            color: var(--primary);
-            background: rgba(255, 255, 255, 0.1);
-        }
-        
-        .auth-buttons {
-            display: flex;
-            gap: 15px;
-        }
-        
-        .btn {
-            padding: 10px 20px;
-            border-radius: 30px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.3s;
-            border: none;
-        }
-        
-        .btn-primary {
-            background: var(--primary);
-            color: white;
-        }
-        
-        .btn-primary:hover {
-            background: var(--primary-dark);
-            transform: translateY(-2px);
-        }
-        
-        .btn-outline {
-            background: transparent;
-            color: var(--text);
-            border: 2px solid var(--primary);
-        }
-        
-        .btn-outline:hover {
-            background: var(--primary);
-        }
-        
-        .hero {
-            padding: 80px 0;
-            text-align: center;
-        }
-        
-        .hero h2 {
-            font-size: 3.5rem;
-            margin-bottom: 20px;
-            line-height: 1.2;
-        }
-        
-        .hero p {
-            font-size: 1.2rem;
-            max-width: 700px;
-            margin: 0 auto 40px;
-            opacity: 0.9;
-        }
-        
-        .dashboard {
-            background: var(--card-bg);
-            border-radius: 12px;
-            overflow: hidden;
-            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
-            margin-top: 40px;
-            border: 1px solid var(--border);
-        }
-        
-        .dashboard-header {
-            background: var(--dark);
-            padding: 15px 20px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-        
-        .dashboard-body {
-            padding: 20px;
-        }
-        
-        .controls {
-            display: flex;
-            gap: 15px;
-            margin-bottom: 20px;
-            flex-wrap: wrap;
-        }
-        
-        .control-group {
-            display: flex;
-            flex-direction: column;
-            gap: 5px;
-        }
-        
-        .control-group label {
-            font-size: 0.9rem;
-            opacity: 0.8;
-        }
-        
-        select, input {
-            padding: 10px 15px;
-            border-radius: 6px;
-            border: 1px solid var(--border);
-            background: var(--background);
-            color: var(--text);
-        }
-        
-        .chart-container {
-            background: #0b1a32;
-            border-radius: 10px;
-            padding: 20px;
-            margin-bottom: 30px;
-            height: 400px;
-            position: relative;
-        }
-        
-        .ai-signals {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-            gap: 20px;
-            margin-bottom: 30px;
-        }
-        
-        .signal-card {
-            background: linear-gradient(135deg, var(--card-bg) 0%, #1c2f45 100%);
-            padding: 20px;
-            border-radius: 10px;
-            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
-            border: 1px solid var(--border);
-        }
-        
-        .signal-card h3 {
-            font-size: 1.2rem;
-            margin-bottom: 15px;
-            color: var(--primary);
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-        
-        .signal-value {
-            font-size: 2rem;
-            font-weight: 700;
-            margin: 10px 0;
-        }
-        
-        .signal-change {
-            margin-top: 10px;
-            font-size: 0.9rem;
-            display: flex;
-            align-items: center;
-            gap: 5px;
-        }
-        
-        .positive {
-            color: var(--success);
-        }
-        
-        .negative {
-            color: var(--danger);
-        }
-        
-        .ai-analysis {
-            background: var(--dark);
-            padding: 20px;
-            border-radius: 10px;
-            margin-top: 20px;
-        }
-        
-        .ai-analysis h3 {
-            margin-bottom: 15px;
-            color: var(--primary);
-        }
-        
-        .analysis-content {
-            display: flex;
-            gap: 20px;
-            flex-wrap: wrap;
-        }
-        
-        .analysis-item {
-            flex: 1;
-            min-width: 250px;
-        }
-        
-        .analysis-item h4 {
-            margin-bottom: 10px;
-            color: var(--warning);
-        }
-        
-        .confidence {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            margin-top: 10px;
-        }
-        
-        .confidence-bar {
-            height: 8px;
-            flex-grow: 1;
-            background: var(--background);
-            border-radius: 4px;
-            overflow: hidden;
-        }
-        
-        .confidence-level {
-            height: 100%;
-            background: linear-gradient(to right, var(--danger), var(--warning), var(--success));
-            border-radius: 4px;
-        }
-        
-        .features {
-            padding: 80px 0;
-        }
-        
-        .section-title {
-            text-align: center;
-            margin-bottom: 50px;
-            color: var(--primary);
-        }
-        
-        .features-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-            gap: 30px;
-        }
-        
-        .feature-card {
-            background: var(--card-bg);
-            padding: 30px;
-            border-radius: 12px;
-            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.05);
-            transition: transform 0.3s;
-            border: 1px solid var(--border);
-        }
-        
-        .feature-card:hover {
-            transform: translateY(-10px);
-        }
-        
-        .feature-card i {
-            font-size: 2.5rem;
-            color: var(--primary);
-            margin-bottom: 20px;
-        }
-        
-        .feature-card h3 {
-            margin-bottom: 15px;
-            color: var(--text);
-        }
-        
-        .cta {
-            padding: 100px 0;
-            text-align: center;
-            background: linear-gradient(135deg, var(--card-bg) 0%, var(--dark) 100%);
-            border-radius: 12px;
-            margin: 40px 0;
-        }
-        
-        .cta h2 {
-            font-size: 2.5rem;
-            margin-bottom: 20px;
-        }
-        
-        .cta p {
-            max-width: 600px;
-            margin: 0 auto 40px;
-            font-size: 1.2rem;
-            opacity: 0.9;
-        }
-        
-        footer {
-            background: var(--card-bg);
-            padding: 60px 0 30px;
-            margin-top: 60px;
-            border-top: 1px solid var(--border);
-        }
-        
-        .footer-content {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-            gap: 40px;
-            margin-bottom: 40px;
-        }
-        
-        .footer-column h3 {
-            font-size: 1.2rem;
-            margin-bottom: 20px;
-            color: var(--primary);
-        }
-        
-        .footer-column ul {
-            list-style: none;
-        }
-        
-        .footer-column ul li {
-            margin-bottom: 10px;
-        }
-        
-        .footer-column a {
-            color: var(--text);
-            text-decoration: none;
-            opacity: 0.8;
-            transition: opacity 0.3s;
-        }
-        
-        .footer-column a:hover {
-            opacity: 1;
-            color: var(--primary);
-        }
-        
-        .copyright {
-            text-align: center;
-            padding-top: 30px;
-            border-top: 1px solid var(--border);
-            opacity: 0.7;
-        }
-        
-        @media (max-width: 768px) {
-            .header-content {
-                flex-direction: column;
-                gap: 15px;
-            }
-            
-            nav ul {
-                gap: 15px;
-                flex-wrap: wrap;
-                justify-content: center;
-            }
-            
-            .hero h2 {
-                font-size: 2.5rem;
-            }
-            
-            .ai-signals {
-                grid-template-columns: 1fr;
-            }
-        }
-    </style>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Bybit — Trading Analyzer (Vanilla JS + Tailwind)</title>
+  <!-- Tailwind CDN (for quick prototype) -->
+  <script src="https://cdn.tailwindcss.com"></script>
 </head>
-<body>
-    <header>
-        <div class="container">
-            <div class="header-content">
-                <div class="logo">
-                    <i class="fas fa-robot"></i>
-                    <h1>Bybit AI Analyst</h1>
-                </div>
-                <nav>
-                    <ul>
-                        <li><a href="#">Home</a></li>
-                        <li><a href="#">Dashboard</a></li>
-                        <li><a href="#">Analysis</a></li>
-                        <li><a href="#">Signals</a></li>
-                        <li><a href="#">API Docs</a></li>
-                    </ul>
-                </nav>
-                <div class="auth-buttons">
-                    <button class="btn btn-outline">Login</button>
-                    <button class="btn btn-primary">Sign Up</button>
-                </div>
-            </div>
-        </div>
+<body class="bg-slate-900 text-slate-100 min-h-screen flex items-center justify-center p-6">
+  <main class="max-w-4xl w-full bg-slate-800/60 backdrop-blur rounded-2xl shadow-2xl p-6">
+    <header class="flex items-center justify-between mb-6">
+      <div>
+        <h1 class="text-2xl font-semibold">Bybit Trading Analyzer</h1>
+        <p class="text-slate-300 text-sm">Vanilla HTML/CSS/JS prototype — Tailwind for styling. Not financial advice.</p>
+      </div>
+      <div class="text-right text-xs text-slate-400">Prototype • Client-side only</div>
     </header>
 
-    <section class="hero">
-        <div class="container">
-            <h2>AI-Powered Bybit Trading Analysis</h2>
-            <p>Get intelligent entry and exit signals powered by advanced artificial intelligence and machine learning algorithms</p>
-            <button class="btn btn-primary">Start Free Trial</button>
-            
-            <div class="dashboard">
-                <div class="dashboard-header">
-                    <div class="logo">
-                        <i class="fas fa-chart-line"></i>
-                        <h3>Bybit Trading Analysis Dashboard</h3>
-                    </div>
-                    <div class="live-badge">
-                        <i class="fas fa-circle"></i> LIVE
-                    </div>
-                </div>
-                <div class="dashboard-body">
-                    <div class="controls">
-                        <div class="control-group">
-                            <label for="symbol">Symbol</label>
-                            <select id="symbol">
-                                <option value="BTCUSDT">BTC/USDT</option>
-                                <option value="ETHUSDT">ETH/USDT</option>
-                                <option value="SOLUSDT">SOL/USDT</option>
-                                <option value="XRPUSDT">XRP/USDT</option>
-                            </select>
-                        </div>
-                        <div class="control-group">
-                            <label for="timeframe">Timeframe</label>
-                            <select id="timeframe">
-                                <option value="15m">15 Minutes</option>
-                                <option value="1h">1 Hour</option>
-                                <option value="4h" selected>4 Hours</option>
-                                <option value="1d">1 Day</option>
-                            </select>
-                        </div>
-                        <div class="control-group">
-                            <label for="strategy">Strategy</label>
-                            <select id="strategy">
-                                <option value="trend">Trend Following</option>
-                                <option value="mean">Mean Reversion</option>
-                                <option value="breakout">Breakout</option>
-                                <option value="volatility">Volatility</option>
-                            </select>
-                        </div>
-                    </div>
-                    
-                    <div class="chart-container">
-                        <canvas id="priceChart"></canvas>
-                    </div>
-                    
-                    <div class="ai-signals">
-                        <div class="signal-card">
-                            <h3><i class="fas fa-door-open"></i> Entry Signal</h3>
-                            <div class="signal-value" id="entryPrice">$61,432.50</div>
-                            <div class="signal-change positive">
-                                <i class="fas fa-arrow-up"></i> Strong buy signal detected
-                            </div>
-                        </div>
-                        <div class="signal-card">
-                            <h3><i class="fas fa-door-closed"></i> Exit Signal</h3>
-                            <div class="signal-value" id="exitPrice">$63,875.20</div>
-                            <div class="signal-change positive">
-                                <i class="fas fa-arrow-up"></i> Take profit target
-                            </div>
-                        </div>
-                        <div class="signal-card">
-                            <h3><i class="fas fa-shield-alt"></i> Stop Loss</h3>
-                            <div class="signal-value" id="stopLoss">$59,220.80</div>
-                            <div class="signal-change negative">
-                                <i class="fas fa-arrow-down"></i> Risk management level
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <div class="ai-analysis">
-                        <h3><i class="fas fa-brain"></i> AI Analysis</h3>
-                        <div class="analysis-content">
-                            <div class="analysis-item">
-                                <h4>Market Sentiment</h4>
-                                <p>Bullish momentum building with increasing volume</p>
-                                <div class="confidence">
-                                    <span>Confidence:</span>
-                                    <div class="confidence-bar">
-                                        <div class="confidence-level" style="width: 78%"></div>
-                                    </div>
-                                    <span>78%</span>
-                                </div>
-                            </div>
-                            <div class="analysis-item">
-                                <h4>Recommended Action</h4>
-                                <p>Enter long position with 2:1 risk-reward ratio</p>
-                                <div class="confidence">
-                                    <span>Confidence:</span>
-                                    <div class="confidence-bar">
-                                        <div class="confidence-level" style="width: 82%"></div>
-                                    </div>
-                                    <span>82%</span>
-                                </div>
-                            </div>
-                            <div class="analysis-item">
-                                <h4>Expected Move</h4>
-                                <p>4.2% upside potential based on current patterns</p>
-                                <div class="confidence">
-                                    <span>Confidence:</span>
-                                    <div class="confidence-bar">
-                                        <div class="confidence-level" style="width: 75%"></div>
-                                    </div>
-                                    <span>75%</span>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
+    <section class="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <!-- Inputs -->
+      <div class="space-y-4">
+        <label class="block">
+          <span class="text-slate-300">Market</span>
+          <select id="market" class="mt-1 block w-full rounded-md bg-slate-700/50 border border-slate-600 p-2">
+            <option value="spot">Spot</option>
+            <option value="usdt_perp">USDT Perpetual</option>
+            <option value="inverse_perp">Inverse Perpetual</option>
+          </select>
+        </label>
+
+        <label class="block">
+          <span class="text-slate-300">Symbol</span>
+          <input id="symbol" placeholder="e.g. BTCUSDT" class="mt-1 block w-full rounded-md bg-slate-700/50 border border-slate-600 p-2" />
+        </label>
+
+        <label class="block">
+          <span class="text-slate-300">Timeframe</span>
+          <select id="timeframe" class="mt-1 block w-full rounded-md bg-slate-700/50 border border-slate-600 p-2">
+            <option>1m</option>
+            <option>5m</option>
+            <option>15m</option>
+            <option>1h</option>
+            <option>4h</option>
+            <option>1d</option>
+          </select>
+        </label>
+
+        <label class="block">
+          <span class="text-slate-300">Entry time</span>
+          <input id="entryTime" type="datetime-local" class="mt-1 block w-full rounded-md bg-slate-700/50 border border-slate-600 p-2" />
+        </label>
+
+        <label class="block">
+          <span class="text-slate-300">Exit time</span>
+          <input id="exitTime" type="datetime-local" class="mt-1 block w-full rounded-md bg-slate-700/50 border border-slate-600 p-2" />
+        </label>
+
+        <label class="block">
+          <span class="text-slate-300">Entry price (optional)</span>
+          <input id="entryPrice" type="number" step="any" placeholder="e.g. 45000" class="mt-1 block w-full rounded-md bg-slate-700/50 border border-slate-600 p-2" />
+        </label>
+
+        <label class="block">
+          <span class="text-slate-300">Exit price (optional)</span>
+          <input id="exitPrice" type="number" step="any" placeholder="e.g. 45200" class="mt-1 block w-full rounded-md bg-slate-700/50 border border-slate-600 p-2" />
+        </label>
+
+      </div>
+
+      <!-- Controls & output -->
+      <div class="space-y-4">
+        <div class="grid grid-cols-2 gap-2">
+          <button id="analyzeBtn" class="py-2 px-3 bg-emerald-500 text-slate-900 rounded-md font-medium hover:opacity-90">Analyze</button>
+          <button id="clearBtn" class="py-2 px-3 bg-slate-600 text-slate-200 rounded-md hover:opacity-90">Clear</button>
         </div>
+
+        <div class="p-4 rounded-lg bg-slate-700/40 border border-slate-600 min-h-[160px]" id="results">
+          <h3 class="text-lg font-semibold">AI Answer</h3>
+          <div id="aiAnswer" class="mt-2 text-slate-200 text-sm">Enter inputs and click <strong>Analyze</strong>.</div>
+        </div>
+
+        <div class="p-4 rounded-lg bg-slate-700/40 border border-slate-600">
+          <h4 class="text-sm text-slate-400">Quick metrics</h4>
+          <ul id="metrics" class="mt-2 text-sm text-slate-200 space-y-1">
+            <li>Duration: —</li>
+            <li>Potential P/L: —</li>
+            <li>Risk / Reward: —</li>
+          </ul>
+        </div>
+
+        <details class="p-3 rounded-md bg-slate-800 border border-slate-700 text-slate-300 text-sm">
+          <summary class="cursor-pointer">Advanced (optional)</summary>
+          <div class="mt-2 space-y-2">
+            <label class="block">
+              <span class="text-slate-300 text-xs">Position size (USD)</span>
+              <input id="sizeUsd" type="number" step="any" placeholder="e.g. 100" class="mt-1 block w-full rounded-md bg-slate-700/50 border border-slate-600 p-2" />
+            </label>
+            <label class="block">
+              <span class="text-slate-300 text-xs">Stop price (optional)</span>
+              <input id="stopPrice" type="number" step="any" placeholder="e.g. 44000" class="mt-1 block w-full rounded-md bg-slate-700/50 border border-slate-600 p-2" />
+            </label>
+            <label class="block">
+              <span class="text-slate-300 text-xs">Take profit (optional)</span>
+              <input id="tpPrice" type="number" step="any" placeholder="e.g. 47000" class="mt-1 block w-full rounded-md bg-slate-700/50 border border-slate-600 p-2" />
+            </label>
+            <p class="text-xs text-amber-300">Tip: You can optionally paste an OpenAI API key below to have the page request a more detailed, natural-language analysis. (Client-side keys are visible in the browser — for production use a server.)</p>
+            <label class="block">
+              <span class="text-slate-300 text-xs">OpenAI API Key (optional)</span>
+              <input id="openAiKey" type="password" placeholder="sk-..." class="mt-1 block w-full rounded-md bg-slate-700/50 border border-slate-600 p-2" />
+            </label>
+          </div>
+        </details>
+
+      </div>
     </section>
 
-    <section class="features">
-        <div class="container">
-            <h2 class="section-title">Advanced AI Trading Features</h2>
-            <div class="features-grid">
-                <div class="feature-card">
-                    <i class="fas fa-signal"></i>
-                    <h3>Real-time Signals</h3>
-                    <p>Get instant entry and exit signals based on live market data and AI analysis.</p>
-                </div>
-                <div class="feature-card">
-                    <i class="fas fa-chart-line"></i>
-                    <h3>Pattern Recognition</h3>
-                    <p>Our AI identifies complex chart patterns and market trends invisible to the human eye.</p>
-                </div>
-                <div class="feature-card">
-                    <i class="fas fa-bolt"></i>
-                    <h3>Fast Execution</h3>
-                    <p>Connect directly to your Bybit account for instant trade execution.</p>
-                </div>
-                <div class="feature-card">
-                    <i class="fas fa-shield-alt"></i>
-                    <h3>Risk Management</h3>
-                    <p>Automated stop-loss and take-profit levels based on volatility analysis.</p>
-                </div>
-                <div class="feature-card">
-                    <i class="fas fa-robot"></i>
-                    <h3>Self-Learning AI</h3>
-                    <p>Our system continuously improves its predictions based on new market data.</p>
-                </div>
-                <div class="feature-card">
-                    <i class="fas fa-mobile-alt"></i>
-                    <h3>Mobile Alerts</h3>
-                    <p>Receive notifications on your phone for important market movements and signals.</p>
-                </div>
-            </div>
-        </div>
-    </section>
+    <footer class="mt-6 text-xs text-slate-400">Built with vanilla JS + Tailwind. Remember: this is a prototype, not financial advice.</footer>
+  </main>
 
-    <div class="container">
-        <section class="cta">
-            <h2>Start Trading Smarter with AI Today</h2>
-            <p>Join thousands of traders who are already maximizing their profits with our AI-powered trading system integrated with Bybit.</p>
-            <button class="btn btn-primary">Get Started Now</button>
-        </section>
-    </div>
+  <script>
+    // Simple analyzer logic (client-side only)
+    const el = id => document.getElementById(id);
+    const analyzeBtn = el('analyzeBtn');
+    const clearBtn = el('clearBtn');
+    const aiAnswer = el('aiAnswer');
+    const metrics = el('metrics');
 
-    <footer>
-        <div class="container">
-            <div class="footer-content">
-                <div class="footer-column">
-                    <h3>Bybit AI Analyst</h3>
-                    <p>Advanced AI-powered trading analysis and execution for maximizing cryptocurrency profits on Bybit.</p>
-                </div>
-                <div class="footer-column">
-                    <h3>Platform</h3>
-                    <ul>
-                        <li><a href="#">Features</a></li>
-                        <li><a href="#">Pricing</a></li>
-                        <li><a href="#">API Documentation</a></li>
-                        <li><a href="#">Bybit Integration</a></li>
-                    </ul>
-                </div>
-                <div class="footer-column">
-                    <h3>Resources</h3>
-                    <ul>
-                        <li><a href="#">Blog</a></li>
-                        <li><a href="#">Tutorials</a></li>
-                        <li><a href="#">Market Analysis</a></li>
-                        <li><a href="#">Support Center</a></li>
-                    </ul>
-                </div>
-                <div class="footer-column">
-                    <h3>Connect</h3>
-                    <ul>
-                        <li><a href="#">Twitter</a></li>
-                        <li><a href="#">Telegram</a></li>
-                        <li><a href="#">Discord</a></li>
-                        <li><a href="#">Email</a></li>
-                    </ul>
-                </div>
-            </div>
-            <div class="copyright">
-                <p>&copy; 2023 Bybit AI Analyst. This is a demo product. Not financial advice.</p>
-            </div>
-        </div>
-    </footer>
+    function prettyDuration(ms) {
+      if (!ms || ms < 0) return '—';
+      const s = Math.floor(ms/1000);
+      const days = Math.floor(s / 86400);
+      const hours = Math.floor((s % 86400) / 3600);
+      const mins = Math.floor((s % 3600) / 60);
+      const parts = [];
+      if (days) parts.push(days + 'd');
+      if (hours) parts.push(hours + 'h');
+      if (mins) parts.push(mins + 'm');
+      if (!parts.length) return '<1m';
+      return parts.join(' ');
+    }
 
-    <script>
-        // Initialize chart
-        const ctx = document.getElementById('priceChart').getContext('2d');
-        
-        // Generate sample price data
-        function generatePriceData(initialPrice, points, volatility) {
-            const data = [];
-            let currentPrice = initialPrice;
-            
-            for (let i = 0; i < points; i++) {
-                // Random price movement
-                const changePercent = (Math.random() - 0.5) * volatility;
-                currentPrice = currentPrice * (1 + changePercent);
-                data.push(currentPrice);
-            }
-            
-            return data;
-        }
-        
-        // Generate timestamps
-        function generateTimestamps(points) {
-            const now = new Date();
-            const timestamps = [];
-            
-            for (let i = points - 1; i >= 0; i--) {
-                const time = new Date(now - i * 15 * 60000); // 15 minute intervals
-                timestamps.push(time.toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'}));
-            }
-            
-            return timestamps;
-        }
-        
-        const initialPrice = 61000;
-        const priceData = generatePriceData(initialPrice, 50, 0.005);
-        const timestamps = generateTimestamps(50);
-        
-        // Create chart
-        const priceChart = new Chart(ctx, {
-            type: 'line',
-            data: {
-                labels: timestamps,
-                datasets: [{
-                    label: 'BTC/USDT',
-                    data: priceData,
-                    borderColor: '#1e88e5',
-                    backgroundColor: 'rgba(30, 136, 229, 0.1)',
-                    borderWidth: 2,
-                    fill: true,
-                    tension: 0.2,
-                    pointRadius: 0,
-                    pointHoverRadius: 5
-                }]
+    function numeric(v) { const n = Number(v); return Number.isFinite(n) ? n : null; }
+
+    function simpleHeuristic(inputs) {
+      // This is a deterministic, non-ML template that mimics an "AI answer" by
+      // explaining the inputs and giving general guidance.
+      const lines = [];
+      lines.push(`<strong>Symbol:</strong> ${inputs.symbol || '—'}`);
+      lines.push(`<strong>Market:</strong> ${inputs.market}`);
+      lines.push(`<strong>Timeframe:</strong> ${inputs.timeframe}`);
+      if (inputs.durationMs !== null) lines.push(`<strong>Estimated trade duration:</strong> ${prettyDuration(inputs.durationMs)}`);
+
+      // Price-based metrics if provided
+      if (inputs.entryPrice !== null && inputs.exitPrice !== null) {
+        const pnl = (inputs.exitPrice - inputs.entryPrice) / inputs.entryPrice * 100;
+        lines.push(`<strong>Raw return:</strong> ${pnl.toFixed(2)}%`);
+      }
+
+      if (inputs.sizeUsd !== null && inputs.entryPrice !== null && inputs.stopPrice !== null) {
+        // rough risk% assuming stop distance
+        const riskPerUnit = Math.abs(inputs.entryPrice - inputs.stopPrice);
+        const estRiskUsd = (riskPerUnit / (inputs.entryPrice || 1)) * inputs.sizeUsd;
+        const estRiskPct = (estRiskUsd / (inputs.sizeUsd || 1)) * 100;
+        lines.push(`<strong>Est. risk (USD):</strong> ${estRiskUsd.toFixed(2)} USD`);
+        lines.push(`<strong>Est. risk (% of position):</strong> ${estRiskPct.toFixed(2)}%`);
+      }
+
+      // Quick advice buckets (very generic)
+      lines.push('<hr class="my-2 border-slate-600">');
+      if (!inputs.entryTime || !inputs.exitTime) {
+        lines.push('<em>Missing entry or exit time — give both to compute duration and timing advice.</em>');
+      } else {
+        // timing-based suggestion
+        const durHours = inputs.durationMs / (1000*60*60);
+        if (durHours < 1) lines.push('Short-term scalp. Focus on execution and tight stops.');
+        else if (durHours < 24) lines.push('Intra-day trade. Watch key hourly levels and news during the day.');
+        else lines.push('Swing/position trade. Consider higher timeframes and macro context.');
+      }
+
+      // Risk acceptance
+      lines.push('<p class="mt-2">Remember: this analyzer is a helper — not a signal. Always size positions so a single loss doesn\'t blow your account.</p>');
+
+      return lines.join('\n');
+    }
+
+    async function analyze() {
+      const market = el('market').value;
+      const symbol = el('symbol').value.trim().toUpperCase();
+      const timeframe = el('timeframe').value;
+      const entryTimeRaw = el('entryTime').value;
+      const exitTimeRaw = el('exitTime').value;
+      const entryPrice = numeric(el('entryPrice').value);
+      const exitPrice = numeric(el('exitPrice').value);
+      const stopPrice = numeric(el('stopPrice').value);
+      const tpPrice = numeric(el('tpPrice').value);
+      const sizeUsd = numeric(el('sizeUsd').value);
+      const openAiKey = el('openAiKey').value.trim();
+
+      let entryTime = entryTimeRaw ? new Date(entryTimeRaw) : null;
+      let exitTime = exitTimeRaw ? new Date(exitTimeRaw) : null;
+      let durationMs = null;
+      if (entryTime && exitTime) {
+        durationMs = exitTime - entryTime;
+        if (isNaN(durationMs)) durationMs = null;
+      }
+
+      // update quick metrics
+      const metricsEl = el('metrics');
+      metricsEl.innerHTML = `
+        <li><strong>Duration:</strong> ${durationMs !== null ? prettyDuration(durationMs) : '—'}</li>
+        <li><strong>Potential P/L:</strong> ${ (entryPrice !== null && exitPrice !== null) ? ((exitPrice - entryPrice).toFixed(8) + ' (raw)') : '—'}</li>
+        <li><strong>Risk / Reward:</strong> ${ (entryPrice !== null && stopPrice !== null && tpPrice !== null) ? ( Math.abs((tpPrice - entryPrice)/(entryPrice - stopPrice)).toFixed(2) + ':1' ) : '—'}</li>
+      `;
+
+      const inputs = { market, symbol, timeframe, entryTime, exitTime, durationMs, entryPrice, exitPrice, stopPrice, tpPrice, sizeUsd };
+
+      // If user provided an OpenAI key, optionally call the API for a natural language answer.
+      if (openAiKey) {
+        aiAnswer.innerHTML = '<em>Contacting OpenAI for a detailed answer...</em>';
+        try {
+          // NOTE: Client-side calls with a secret key are visible in the browser and not recommended for production.
+          // This example uses the Chat Completions API. Adjust model & endpoint as desired.
+          const systemPrompt = `You are a concise trading assistant. Provide clear, actionable observations about this trade and note that you are not providing financial advice.`;
+          const userPrompt = `Analyze this trade: ${JSON.stringify({symbol, market, timeframe, entryTime: entryTime?entryTime.toISOString():null, exitTime: exitTime?exitTime.toISOString():null, entryPrice, exitPrice, stopPrice, tpPrice, sizeUsd}, null, 2)}\nGive: (1) Short summary, (2) Key risks, (3) Suggested checks before entering.`;
+
+          const resp = await fetch('https://api.openai.com/v1/chat/completions', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': 'Bearer ' + openAiKey
             },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: {
-                    legend: {
-                        display: false
-                    },
-                    tooltip: {
-                        mode: 'index',
-                        intersect: false,
-                        callbacks: {
-                            label: function(context) {
-                                return `Price: $${context.raw.toFixed(2)}`;
-                            }
-                        }
-                    }
-                },
-                scales: {
-                    x: {
-                        grid: {
-                            color: 'rgba(255, 255, 255, 0.05)'
-                        },
-                        ticks: {
-                            color: 'rgba(255, 255, 255, 0.7)',
-                            maxRotation: 0,
-                            callback: function(value, index, values) {
-                                // Only show every 5th label to avoid crowding
-                                return index % 5 === 0 ? this.getLabelForValue(value) : '';
-                            }
-                        }
-                    },
-                    y: {
-                        grid: {
-                            color: 'rgba(255, 255, 255, 0.05)'
-                        },
-                        ticks: {
-                            color: 'rgba(255, 255, 255, 0.7)',
-                            callback: function(value) {
-                                return '$' + value.toFixed(0);
-                            }
-                        }
-                    }
-                },
-                interaction: {
-                    mode: 'index',
-                    intersect: false
-                }
-            }
-        });
-        
-        // Simulate real-time updates
-        function updateChart() {
-            // Add new data point
-            const lastPrice = priceChart.data.datasets[0].data[priceChart.data.datasets[0].data.length - 1];
-            const changePercent = (Math.random() - 0.5) * 0.005;
-            const newPrice = lastPrice * (1 + changePercent);
-            
-            // Remove first data point and add new one at the end
-            priceChart.data.labels.push(timestamps[timestamps.length - 1]);
-            priceChart.data.labels.shift();
-            priceChart.data.datasets[0].data.push(newPrice);
-            priceChart.data.datasets[0].data.shift();
-            
-            // Update entry and exit signals
-            document.getElementById('entryPrice').textContent = '$' + (lastPrice * 0.998).toFixed(2);
-            document.getElementById('exitPrice').textContent = '$' + (lastPrice * 1.042).toFixed(2);
-            document.getElementById('stopLoss').textContent = '$' + (lastPrice * 0.972).toFixed(2);
-            
-            priceChart.update();
+            body: JSON.stringify({ model: 'gpt-4o-mini', messages: [{role: 'system', content: systemPrompt}, {role: 'user', content: userPrompt}], max_tokens: 600 })
+          });
+
+          if (!resp.ok) {
+            const txt = await resp.text();
+            throw new Error('OpenAI error: ' + resp.status + ' ' + txt);
+          }
+          const data = await resp.json();
+          const content = data.choices && data.choices[0] && (data.choices[0].message?.content || data.choices[0].text) || 'No response.';
+          aiAnswer.innerHTML = content.replace(/\n/g, '<br>');
+        } catch (err) {
+          aiAnswer.innerHTML = `<span class='text-amber-300'>OpenAI request failed:</span> ${err.message}`;
         }
-        
-        // Update chart every 5 seconds
-        setInterval(updateChart, 5000);
-        
-        // Update signals when symbol changes
-        document.getElementById('symbol').addEventListener('change', function() {
-            // In a real app, this would fetch new data from the API
-            const symbols = {
-                'BTCUSDT': 61000,
-                'ETHUSDT': 3400,
-                'SOLUSDT': 140,
-                'XRPUSDT': 0.65
-            };
-            
-            const newPrice = symbols[this.value];
-            const newData = generatePriceData(newPrice, 50, 0.005);
-            
-            priceChart.data.datasets[0].data = newData;
-            priceChart.update();
-            
-            // Update signals
-            document.getElementById('entryPrice').textContent = '$' + (newPrice * 0.998).toFixed(2);
-            document.getElementById('exitPrice').textContent = '$' + (newPrice * 1.042).toFixed(2);
-            document.getElementById('stopLoss').textContent = '$' + (newPrice * 0.972).toFixed(2);
-        });
-    </script>
+        return;
+      }
+
+      // Otherwise use the simple heuristic template
+      aiAnswer.innerHTML = simpleHeuristic(inputs);
+    }
+
+    analyzeBtn.addEventListener('click', async (e) => { e.preventDefault(); analyze(); });
+    clearBtn.addEventListener('click', (e) => {
+      e.preventDefault();
+      document.querySelectorAll('input').forEach(i => i.value = '');
+      document.querySelectorAll('select').forEach(s => s.selectedIndex = 0);
+      aiAnswer.innerHTML = 'Enter inputs and click <strong>Analyze</strong>.';
+      metrics.innerHTML = '<li>Duration: —</li><li>Potential P/L: —</li><li>Risk / Reward: —</li>';
+    });
+
+  </script>
 </body>
 </html>
