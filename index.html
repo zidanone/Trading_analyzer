@@ -747,4 +747,310 @@
             // Sentiment analysis
             if (analysis.sentiment > 75) {
                 insights.push({
-                    type: '
+                    type: 'positive',
+                    title: '🚀 Bullish Sentiment Detected',
+                    description: `Market sentiment at ${analysis.sentiment.toFixed(1)}% indicates strong bullish momentum.`
+                });
+            } else if (analysis.sentiment < 25) {
+                insights.push({
+                    type: 'negative',
+                    title: '🐻 Bearish Sentiment Warning',
+                    description: `Low sentiment score of ${analysis.sentiment.toFixed(1)}% suggests market pessimism.`
+                });
+            }
+            
+            // AI confidence analysis
+            if (analysis.confidenceScore > 80) {
+                insights.push({
+                    type: 'positive',
+                    title: '🤖 High AI Confidence',
+                    description: `AI model shows ${analysis.confidenceScore}% confidence in trade direction.`
+                });
+            } else if (analysis.confidenceScore < 40) {
+                insights.push({
+                    type: 'warning',
+                    title: '🔄 Mixed Signals Detected',
+                    description: `Low confidence at ${analysis.confidenceScore}% - consider waiting for clearer signals.`
+                });
+            }
+            
+            return insights;
+        }
+
+        function displayResults(analysis) {
+            // Update timestamp
+            document.getElementById('analysisTime').textContent = 
+                `Analysis completed: ${new Date().toLocaleString()}`;
+            
+            // Update profit/loss
+            const profitElement = document.getElementById('profitLoss');
+            const profitClass = analysis.profitLoss > 0 ? 'profit-positive' : 
+                               analysis.profitLoss < 0 ? 'profit-negative' : 'profit-neutral';
+            profitElement.textContent = `${analysis.profitLoss.toFixed(2)}`;
+            profitElement.className = `metric-value ${profitClass}`;
+            
+            document.getElementById('profitPercentage').textContent = 
+                `${analysis.profitPercentage > 0 ? '+' : ''}${analysis.profitPercentage.toFixed(2)}%`;
+            
+            // Update risk/reward
+            document.getElementById('riskReward').textContent = `1:${analysis.riskRewardRatio.toFixed(1)}`;
+            
+            // Update AI confidence
+            document.getElementById('confidenceScore').textContent = `${analysis.confidenceScore}%`;
+            const signalStrength = analysis.confidenceScore > 75 ? 'Strong Signal' :
+                                 analysis.confidenceScore > 50 ? 'Moderate Signal' : 'Weak Signal';
+            document.getElementById('signalStrength').textContent = signalStrength;
+            
+            // Update expected ROI
+            const expectedROI = document.getElementById('expectedROI');
+            const roiClass = analysis.expectedROI > 0 ? 'profit-positive' : 
+                            analysis.expectedROI < 0 ? 'profit-negative' : 'profit-neutral';
+            expectedROI.textContent = `${analysis.expectedROI > 0 ? '+' : ''}${analysis.expectedROI.toFixed(2)}%`;
+            expectedROI.className = `metric-value ${roiClass}`;
+            
+            // Update recommendations
+            const recommendationsContainer = document.getElementById('recommendations');
+            recommendationsContainer.innerHTML = '';
+            
+            analysis.insights.forEach(insight => {
+                const recommendationDiv = document.createElement('div');
+                recommendationDiv.className = 'recommendation';
+                recommendationDiv.innerHTML = `
+                    <strong>${insight.title}</strong>
+                    <p>${insight.description}</p>
+                `;
+                recommendationsContainer.appendChild(recommendationDiv);
+            });
+            
+            // Add technical analysis summary
+            const technicalSummary = document.createElement('div');
+            technicalSummary.className = 'recommendation';
+            technicalSummary.innerHTML = `
+                <strong>📊 Technical Analysis Summary</strong>
+                <p>RSI: ${analysis.technicalData.rsi.toFixed(1)} | 
+                   MACD: ${analysis.technicalData.macd.macd.toFixed(4)} | 
+                   Volatility: ${analysis.technicalData.volatility.toFixed(1)}% | 
+                   Sentiment: ${analysis.technicalData.sentiment.toFixed(1)}%</p>
+            `;
+            recommendationsContainer.appendChild(technicalSummary);
+        }
+
+        // Symbol search functionality
+        function filterSymbols() {
+            const searchTerm = document.getElementById('symbolSearch').value.toLowerCase();
+            const symbolSelect = document.getElementById('symbol');
+            const options = Array.from(symbolSelect.options);
+            
+            // Hide all options first
+            options.forEach(option => {
+                option.style.display = option.text.toLowerCase().includes(searchTerm) ? 'block' : 'none';
+            });
+            
+            // Auto-select first visible option
+            const firstVisible = options.find(option => 
+                option.style.display !== 'none' && option.value !== ''
+            );
+            if (firstVisible) {
+                symbolSelect.value = firstVisible.value;
+            }
+        }
+
+        // Auto-fill prices based on symbol selection
+        document.getElementById('symbol').addEventListener('change', function() {
+            const symbol = this.value;
+            // Simulate fetching current price
+            const currentPrice = Math.random() * 50000 + 20000;
+            document.getElementById('entryPrice').value = currentPrice.toFixed(2);
+            document.getElementById('exitPrice').value = (currentPrice * 1.05).toFixed(2);
+        });
+
+        // Market status simulation
+        function updateMarketStatus() {
+            const statuses = ['LIVE', 'PRE-MARKET', 'AFTER-HOURS', 'CLOSED'];
+            const randomStatus = statuses[Math.floor(Math.random() * statuses.length)];
+            document.getElementById('marketStatus').textContent = randomStatus;
+        }
+
+        // Initialize the analyzer
+        const analyzer = new TradingAnalyzer();
+
+        // Add API configuration button to header
+        document.addEventListener('DOMContentLoaded', function() {
+            // Create API config panel
+            createAPIConfigPanel();
+            
+            // Add toggle button to header
+            const header = document.querySelector('.header');
+            const toggleButton = document.createElement('button');
+            toggleButton.innerHTML = '⚙️ Configure AI APIs (Optional)';
+            toggleButton.style.cssText = `
+                background: rgba(124, 58, 237, 0.2);
+                border: 1px solid rgba(124, 58, 237, 0.5);
+                color: white;
+                padding: 10px 20px;
+                border-radius: 8px;
+                cursor: pointer;
+                margin-top: 15px;
+                transition: all 0.3s ease;
+            `;
+            toggleButton.onclick = toggleAPIConfig;
+            toggleButton.onmouseover = () => toggleButton.style.background = 'rgba(124, 58, 237, 0.3)';
+            toggleButton.onmouseout = () => toggleButton.style.background = 'rgba(124, 58, 237, 0.2)';
+            
+            header.appendChild(toggleButton);
+            
+            // Set random initial values
+            const initialPrice = Math.random() * 50000 + 20000;
+            document.getElementById('entryPrice').value = initialPrice.toFixed(2);
+            document.getElementById('exitPrice').value = (initialPrice * 1.03).toFixed(2);
+            
+            // Update market status every 30 seconds
+            updateMarketStatus();
+            setInterval(updateMarketStatus, 30000);
+        });
+
+        // Advanced Features
+
+        // Real-time price updates simulation
+        function simulateRealTimePrices() {
+            const symbols = ['BTCUSDT', 'ETHUSDT', 'XRPUSDT', 'ADAUSDT'];
+            const prices = {};
+            
+            symbols.forEach(symbol => {
+                prices[symbol] = Math.random() * 50000 + 20000;
+            });
+            
+            return prices;
+        }
+
+        // Portfolio risk calculation
+        function calculatePortfolioRisk(trades) {
+            let totalRisk = 0;
+            let totalValue = 0;
+            
+            trades.forEach(trade => {
+                const riskAmount = trade.entryPrice * (trade.stopLoss / 100);
+                totalRisk += riskAmount;
+                totalValue += trade.entryPrice;
+            });
+            
+            return (totalRisk / totalValue) * 100;
+        }
+
+        // Advanced order types simulation
+        const orderTypes = {
+            MARKET: 'Execute immediately at current market price',
+            LIMIT: 'Execute only at specified price or better',
+            STOP_LOSS: 'Execute when price reaches stop level',
+            TAKE_PROFIT: 'Execute when profit target is reached',
+            TRAILING_STOP: 'Dynamic stop that follows favorable price movement'
+        };
+
+        // Machine learning model training simulation
+        class MLModelTrainer {
+            constructor() {
+                this.trainingData = [];
+                this.model = null;
+            }
+            
+            addTrainingData(features, outcome) {
+                this.trainingData.push({ features, outcome });
+            }
+            
+            train() {
+                // Simulate model training
+                console.log(`Training ML model with ${this.trainingData.length} data points...`);
+                this.model = new AITradingModel();
+                return true;
+            }
+            
+            predict(features) {
+                if (!this.model) {
+                    throw new Error('Model not trained yet');
+                }
+                return this.model.predict(features);
+            }
+        }
+
+        // Initialize ML trainer
+        const mlTrainer = new MLModelTrainer();
+
+        // Keyboard shortcuts
+        document.addEventListener('keydown', function(e) {
+            if (e.ctrlKey || e.metaKey) {
+                switch(e.key) {
+                    case 'Enter':
+                        e.preventDefault();
+                        document.getElementById('analysisForm').dispatchEvent(new Event('submit'));
+                        break;
+                    case 'r':
+                        e.preventDefault();
+                        location.reload();
+                        break;
+                }
+            }
+        });
+
+        // Export analysis results
+        function exportResults(analysis) {
+            const data = {
+                timestamp: new Date().toISOString(),
+                symbol: document.getElementById('symbol').value,
+                analysis: analysis,
+                recommendations: analysis.insights
+            };
+            
+            const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `trading_analysis_${Date.now()}.json`;
+            a.click();
+            URL.revokeObjectURL(url);
+        }
+
+        // Performance monitoring
+        class PerformanceMonitor {
+            constructor() {
+                this.trades = [];
+                this.metrics = {};
+            }
+            
+            addTrade(trade) {
+                this.trades.push({
+                    ...trade,
+                    timestamp: Date.now()
+                });
+                this.updateMetrics();
+            }
+            
+            updateMetrics() {
+                const profitableTrades = this.trades.filter(t => t.profitLoss > 0);
+                const winRate = (profitableTrades.length / this.trades.length) * 100;
+                const totalProfit = this.trades.reduce((sum, t) => sum + t.profitLoss, 0);
+                const averageProfit = totalProfit / this.trades.length;
+                
+                this.metrics = {
+                    totalTrades: this.trades.length,
+                    winRate: winRate,
+                    totalProfit: totalProfit,
+                    averageProfit: averageProfit,
+                    bestTrade: Math.max(...this.trades.map(t => t.profitLoss)),
+                    worstTrade: Math.min(...this.trades.map(t => t.profitLoss))
+                };
+            }
+            
+            getMetrics() {
+                return this.metrics;
+            }
+        }
+
+        // Initialize performance monitor
+        const performanceMonitor = new PerformanceMonitor();
+
+        console.log('🤖 AI Trading Analyzer initialized successfully!');
+        console.log('Advanced features: ML predictions, technical analysis, risk management');
+        console.log('Use Ctrl+Enter to analyze, Ctrl+R to refresh');
+    </script>
+</body>
+</html>
