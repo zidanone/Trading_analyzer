@@ -1,1 +1,242 @@
-<h1>FUCK off</h1>
+<!--
+AI Trade Analyzer — Single-file front-end + example Node backend (in comments)
+
+How to use:
+1. Save this file as `index.html` and open in browser for the frontend.
+2. Create a small Node/Express server (example at bottom) that exposes POST /api/analyze.
+3. Set OPENAI_API_KEY in your server environment (never put it in client code).
+4. Run the server and point the frontend to it (default localhost:3000).
+
+The frontend sends a structured payload to /api/analyze; the server queries OpenAI Chat Completion and returns structured JSON.
+-->
+
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>AI Trade Analyzer — RootMind</title>
+  <style>
+    :root{font-family:Inter, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial;}
+    body{max-width:980px;margin:28px auto;padding:24px;background:#fbfbfd;color:#111}
+    header{display:flex;align-items:center;gap:12px}
+    h1{margin:0;font-size:20px}
+    textarea,input,select,button{font-size:14px;padding:10px;border:1px solid #ddd;border-radius:8px}
+    textarea{width:100%;min-height:140px;resize:vertical}
+    .row{display:flex;gap:12px;margin-top:12px}
+    .col{flex:1}
+    .panel{background:#fff;border-radius:12px;padding:14px;box-shadow:0 6px 18px rgba(12,20,40,0.05)}
+    .result{white-space:pre-wrap;font-family:monospace;background:#f6f7fb;padding:12px;border-radius:8px}
+    .muted{color:#6b6f76;font-size:13px}
+    footer{margin-top:18px;color:#666;font-size:13px}
+  </style>
+</head>
+<body>
+  <header>
+    <img src="" alt="" style="width:44px;height:44px;border-radius:8px;background:linear-gradient(135deg,#6b73ff,#000dff);display:inline-block"/>
+    <div>
+      <h1>AI Trade Analyzer — quick analysis from trade log (OpenAI)</h1>
+      <div class="muted">Paste a short trade log and get a decision + entry/exit + short reasoning (Arabic/English supported)</div>
+    </div>
+  </header>
+
+  <main style="margin-top:18px">
+    <div class="panel">
+      <label class="muted">Paste trade data (example included below):</label>
+      <textarea id="inputLog">Entry Time (Algeria): 9/14/2025, 20:44:29
+⏱ Exit Time (Algeria): 9/14/2025, 20:44:56
+
+*   **التحليل:**
+    شهد السعر في البداية اتجاهًا هبوطيًا قويًا من 115630.6 (19:35) وصولاً إلى 115575.1 (19:41).
+    في الساعة 19:42، ظهرت شمعة انعكاسية صعودية قوية، تلاها شمعة صعودية قوية في الساعة 19:43 أكدت الزخم الصعودي.
+    استمر الاتجاه الصعودي في الساعة 19:44، حيث أغلقت الشمعة الأخيرة عند أعلى مستوياتها تقريبًا، مما يشير إلى استمرار ضغط الشراء بعد الانعكاس.
+
+*   **النتيجة:**
+    *   **القرار:** شراء
+    *   **سعر الدخول (Entry):** 115598.3
+    *   **سعر الخروج (Exit):** 115615
+</textarea>
+
+      <div class="row" style="margin-top:12px">
+        <div class="col">
+          <label class="muted">Model language</label>
+          <select id="lang">
+            <option value="ar">Arabic (العربية)</option>
+            <option value="en">English</option>
+          </select>
+        </div>
+        <div class="col">
+          <label class="muted">Server endpoint</label>
+          <input id="endpoint" value="/api/analyze" />
+        </div>
+        <div style="display:flex;align-items:flex-end">
+          <button id="analyzeBtn">Analyze with AI</button>
+        </div>
+      </div>
+
+      <div style="margin-top:12px;display:flex;gap:12px">
+        <div style="flex:1">
+          <label class="muted">Parsed JSON result</label>
+          <div class="result" id="jsonOut">(nothing yet)</div>
+        </div>
+        <div style="flex:1">
+          <label class="muted">Human-friendly summary</label>
+          <div class="result" id="textOut">(nothing yet)</div>
+        </div>
+      </div>
+
+      <div style="margin-top:12px">
+        <small class="muted">Notes: The frontend never includes the OpenAI API key. You must run a simple backend that holds the key. Example backend code is appended to this file (Node/Express + fetch to OpenAI).</small>
+      </div>
+    </div>
+
+    <footer>
+      <div>Quick tips: keep logs short (1–2 paragraphs). The server uses a structured system prompt to return a JSON object: {decision, entry, exit, confidence, explanation}.</div>
+    </footer>
+  </main>
+
+  <script>
+    async function analyze() {
+      const input = document.getElementById('inputLog').value.trim();
+      const lang = document.getElementById('lang').value;
+      const endpoint = document.getElementById('endpoint').value || '/api/analyze';
+      if (!input) return alert('Paste your trade log first.');
+      document.getElementById('analyzeBtn').disabled = true;
+      document.getElementById('jsonOut').textContent = 'Analyzing...';
+      document.getElementById('textOut').textContent = '';
+
+      try {
+        const res = await fetch(endpoint, {
+          method: 'POST',
+          headers: {'Content-Type':'application/json'},
+          body: JSON.stringify({log: input, lang})
+        });
+        if (!res.ok) {
+          const txt = await res.text();
+          throw new Error('Server error: ' + res.status + ' ' + txt);
+        }
+        const data = await res.json();
+        document.getElementById('jsonOut').textContent = JSON.stringify(data, null, 2);
+        // build a readable summary
+        const summary = [];
+        summary.push((data.decision? 'Decision: ' + data.decision : 'Decision: —'));
+        if (data.entry) summary.push('Entry: ' + data.entry);
+        if (data.exit) summary.push('Exit: ' + data.exit);
+        if (data.confidence) summary.push('Confidence: ' + data.confidence);
+        if (data.explanation) summary.push('\nExplanation:\n' + data.explanation);
+        document.getElementById('textOut').textContent = summary.join('\n');
+      } catch (err) {
+        document.getElementById('jsonOut').textContent = 'Error: ' + err.message;
+      } finally {
+        document.getElementById('analyzeBtn').disabled = false;
+      }
+    }
+    document.getElementById('analyzeBtn').addEventListener('click', analyze);
+  </script>
+
+  <!--
+  -------------------------------------------------------------
+  Example server (Node.js + Express). Save as server.js and run:
+    npm init -y
+    npm install express node-fetch dotenv
+    node server.js
+
+  Set environment variable OPENAI_API_KEY and (optionally) PORT.
+  -------------------------------------------------------------
+
+  // --- server.js --- (copy below into a separate file) ---
+
+  const express = require('express');
+  const fetch = require('node-fetch');
+  const app = express();
+  require('dotenv').config();
+
+  const OPENAI_KEY = process.env.OPENAI_API_KEY;
+  if (!OPENAI_KEY) {
+    console.error('Set OPENAI_API_KEY in your environment.');
+    process.exit(1);
+  }
+
+  app.use(express.json());
+  app.use(express.static('.'));// serve index.html for quick local testing
+
+  app.post('/api/analyze', async (req, res) => {
+    try {
+      const { log = '', lang = 'ar'} = req.body;
+
+      // Build a clear system prompt instructing the model to return JSON only.
+      const systemPrompt = `You are a professional trading analyst. You will receive a short trade log and a short analysis in either Arabic or English. Output ONLY a JSON object (no extra text) with the following fields:\n\n{
+  "decision": "BUY|SELL|HOLD|UNSURE",
+  "entry": number_or_string_or_null,
+  "exit": number_or_string_or_null,
+  "confidence": "low|medium|high",
+  "explanation": "short one-paragraph explanation in the same language as the log"
+}\n\nIf a numeric entry/exit exists in the log, parse and return them as numbers (or strings if parsing fails). If not available, set to null. Keep explanation short (max 40 words).`;
+
+      // Create chat messages
+      const userMessage = `LANG:${lang}\nLOG_START\n${log}\nLOG_END`;
+
+      const body = {
+        model: 'gpt-4o-mini', // replace with the model you prefer or keep server-configurable
+        messages: [
+          {role: 'system', content: systemPrompt},
+          {role: 'user', content: userMessage}
+        ],
+        temperature: 0.1,
+        max_tokens: 300
+      };
+
+      const openaiRes = await fetch('https://api.openai.com/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${OPENAI_KEY}`
+        },
+        body: JSON.stringify(body)
+      });
+
+      if (!openaiRes.ok) {
+        const t = await openaiRes.text();
+        return res.status(502).send('OpenAI error: ' + t);
+      }
+
+      const ans = await openaiRes.json();
+      const raw = ans.choices && ans.choices[0] && ans.choices[0].message && ans.choices[0].message.content;
+      // Try to extract JSON from the model output
+      let json = null;
+      try {
+        // find first '{' and last '}' to reduce chance of extra chatter
+        const first = raw.indexOf('{');
+        const last = raw.lastIndexOf('}');
+        const substr = raw.slice(first, last + 1);
+        json = JSON.parse(substr);
+      } catch (e) {
+        // fallback: return the raw model text for debugging
+        return res.json({raw: raw, error: 'Failed to parse JSON from model output.'});
+      }
+
+      // Optionally sanitize
+      if (json.entry && typeof json.entry === 'string') {
+        const n = Number(json.entry.replace(/[^0-9.\-]/g, ''));
+        if (!isNaN(n)) json.entry = n;
+      }
+      if (json.exit && typeof json.exit === 'string') {
+        const n = Number(json.exit.replace(/[^0-9.\-]/g, ''));
+        if (!isNaN(n)) json.exit = n;
+      }
+
+      res.json(json);
+
+    } catch (err) {
+      console.error(err);
+      res.status(500).json({error: err.message});
+    }
+  });
+
+  const PORT = process.env.PORT || 3000;
+  app.listen(PORT, () => console.log('Server listening on', PORT));
+
+  // --- end of server.js ---
+  -->
+</body>
+</html>
