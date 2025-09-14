@@ -1,38 +1,76 @@
-updateTradingViewDisplay(symbol) {
-                if (!this.currentTicker) return;
-                
-                const ticker = this.currentTicker;
-                const currentPrice = parseFloat(ticker.last_price);
-                const previousPrice = parseFloat(ticker.prev_price_24h);
-                const openPrice = parseFloat(ticker.open_price || ticker.prev_price_24h);
-                const highPrice = parseFloat(ticker.high_price_24h);
-                const lowPrice = parseFloat(ticker.low_price_24h);
-                const priceChange = currentPrice - previousPrice;
-                const priceChangePercent = parseFloat(ticker.price_24h_pcnt) * 100;
-                
-                // Extract symbol info
-                const baseCurrency = symbol.replace('USDT', '').replace('USDC', '').replace('USD', '');
-                const quoteCurrency = symbol.includes('USDT') ? 'USDT' : symbol.includes('USDC') ? 'USDC' : 'USD';
-                
-                // Update symbol header
-                document.getElementById('symbolHeader').textContent = 
-                    `🟡 ${this.getCurrencyName(baseCurrency)} / Tether${quoteCurrency} • 1D • Bybit`;
-                
-                // Update main price (TradingView style)
-                document.getElementById('mainTradingPrice').textContent = this.formatPrice(currentPrice);
-                
-                // Update price change with exact TradingView formatting
-                const changeAmountElement = document.getElementById('priceChangeMain');
-                const changePercentElement = document.getElementById('priceChangePercentMain');
-                
-                changeAmountElement.textContent = `${priceChange >= 0 ? '+' : ''}${priceChange.toFixed(2)}`;
-                changePercentElement.textContent = `(${priceChangePercent >= 0 ? '+' : ''}${priceChangePercent.toFixed(2)}%)`;
-                
-                // Color coding exactly like TradingView
-                const changeColor = priceChange >= 0 ? '#00ff88' : '#ff4757';
-                changeAmountElement.style.color = changeColor;
-                changePercentElement.style.color = changeColor;
-                <!DOCTYPE html>
+// Trading execution function
+        function executeTrade(action) {
+            bybitAnalyzer.executeTrade(action);
+        }
+
+        // Auto-update market data every 10 seconds for TradingView feel
+        setInterval(async () => {
+            const symbol = document.getElementById('tradingPair').value;
+            if (symbol) {
+                try {
+                    const marketData = await bybitAnalyzer.fetchBybitData(symbol, '1h');
+                    const technicals = bybitAnalyzer.calculateTechnicalIndicators(marketData);
+                    bybitAnalyzer.updateMarketDisplay(marketData, technicals);
+                    bybitAnalyzer.updateTradingViewDisplay(symbol);
+                    
+                    console.log('🔄 TradingView style update:', symbol);
+                } catch (error) {
+                    console.log('Background update failed:', error);
+                }
+            }
+        }, 10000); // Update every 10 seconds for more responsive feel
+
+        // Symbol change handler - immediate TradingView update
+        document.getElementById('tradingPair').addEventListener('change', async function() {
+            const symbol = this.value;
+            console.log('📊 Symbol changed to:', symbol);
+            
+            try {
+                const marketData = await bybitAnalyzer.fetchBybitData(symbol, '1h');
+                const technicals = bybitAnalyzer.calculateTechnicalIndicators(marketData);
+                bybitAnalyzer.updateMarketDisplay(marketData, technicals);
+                bybitAnalyzer.updateTradingViewDisplay(symbol);
+            } catch (error) {
+                console.log('Symbol change update failed:', error);
+            }
+        });
+
+        // Add CSS animation for notifications
+        const style = document.createElement('style');
+        style.textContent = `
+            @keyframes slideIn {
+                from {
+                    transform: translateX(100%);
+                    opacity: 0;
+                }
+                to {
+                    transform: translateX(0);
+                    opacity: 1;
+                }
+            }
+            
+            button:hover {
+                transform: translateY(-2px);
+                box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+            }
+        `;
+        document.head.appendChild(style);
+
+        // Initialize with default data
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('🚀 Bybit AI Analyzer initialized');
+            console.log('📡 TradingView-style interface active');
+            
+            // Load initial market data with TradingView display
+            setTimeout(async () => {
+                try {
+                    const symbol = 'BTCUSDT';
+                    const marketData = await bybitAnalyzer.fetchBybitData(symbol, '1h');
+                    const technicals = bybitAnalyzer.calculateTechnicalIndicators(marketData);
+                    bybitAnalyzer.updateMarketDisplay(marketData, technicals);
+                    bybitAnalyzer.updateTradingViewDisplay(symbol);
+                } catch (error) {
+                    console.log('Initial data<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
