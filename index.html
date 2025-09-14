@@ -1,1059 +1,138 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Bybit AI Trading Dashboard</title>
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: linear-gradient(135deg, #0f0f23 0%, #1a1a2e 50%, #16213e 100%);
-            color: #ffffff;
-            min-height: 100vh;
-            overflow-x: hidden;
-        }
-
-        .header {
-            background: rgba(255, 255, 255, 0.05);
-            backdrop-filter: blur(20px);
-            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-            padding: 1rem 2rem;
-            position: sticky;
-            top: 0;
-            z-index: 1000;
-        }
-
-        .header h1 {
-            font-size: 2rem;
-            font-weight: 700;
-            background: linear-gradient(45deg, #f7931e, #ffd700);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-        }
-
-        .dashboard {
-            display: grid;
-            grid-template-columns: 1fr 2fr 1fr;
-            gap: 2rem;
-            padding: 2rem;
-            max-width: 1800px;
-            margin: 0 auto;
-        }
-
-        .card {
-            background: rgba(255, 255, 255, 0.05);
-            backdrop-filter: blur(20px);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            border-radius: 20px;
-            padding: 2rem;
-            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
-            transition: all 0.3s ease;
-            position: relative;
-            overflow: hidden;
-        }
-
-        .card::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            height: 2px;
-            background: linear-gradient(90deg, #f7931e, #ffd700, #f7931e);
-            animation: shimmer 3s ease-in-out infinite;
-        }
-
-        @keyframes shimmer {
-            0%, 100% { opacity: 0.3; }
-            50% { opacity: 1; }
-        }
-
-        .card:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 30px 60px rgba(247, 147, 30, 0.2);
-        }
-
-        .symbol-selector {
-            margin-bottom: 2rem;
-        }
-
-        .symbol-selector select {
-            width: 100%;
-            padding: 1rem;
-            background: rgba(255, 255, 255, 0.1);
-            border: 1px solid rgba(255, 255, 255, 0.2);
-            border-radius: 10px;
-            color: white;
-            font-size: 1rem;
-            outline: none;
-            cursor: pointer;
-            transition: all 0.3s ease;
-        }
-
-        .symbol-selector select:hover {
-            background: rgba(255, 255, 255, 0.15);
-            border-color: #f7931e;
-        }
-
-        .price-display {
-            text-align: center;
-            margin: 2rem 0;
-        }
-
-        .price {
-            font-size: 3rem;
-            font-weight: 700;
-            margin: 0.5rem 0;
-            text-shadow: 0 0 20px currentColor;
-        }
-
-        .price.bullish {
-            color: #00ff88;
-            animation: pulse-green 2s ease-in-out infinite;
-        }
-
-        .price.bearish {
-            color: #ff4757;
-            animation: pulse-red 2s ease-in-out infinite;
-        }
-
-        @keyframes pulse-green {
-            0%, 100% { text-shadow: 0 0 20px #00ff88; }
-            50% { text-shadow: 0 0 30px #00ff88, 0 0 40px #00ff88; }
-        }
-
-        @keyframes pulse-red {
-            0%, 100% { text-shadow: 0 0 20px #ff4757; }
-            50% { text-shadow: 0 0 30px #ff4757, 0 0 40px #ff4757; }
-        }
-
-        .change {
-            font-size: 1.2rem;
-            margin-top: 0.5rem;
-        }
-
-        .ai-analysis {
-            background: linear-gradient(135deg, rgba(147, 51, 234, 0.1), rgba(79, 70, 229, 0.1));
-            border: 1px solid rgba(147, 51, 234, 0.3);
-            border-radius: 15px;
-            padding: 1.5rem;
-            margin: 1rem 0;
-        }
-
-        .ai-title {
-            display: flex;
-            align-items: center;
-            margin-bottom: 1rem;
-        }
-
-        .ai-icon {
-            width: 24px;
-            height: 24px;
-            margin-right: 0.5rem;
-            animation: rotate 4s linear infinite;
-        }
-
-        @keyframes rotate {
-            from { transform: rotate(0deg); }
-            to { transform: rotate(360deg); }
-        }
-
-        .signal {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 1rem;
-            background: rgba(255, 255, 255, 0.05);
-            border-radius: 10px;
-            margin: 1rem 0;
-            border-left: 4px solid;
-        }
-
-        .signal.buy {
-            border-left-color: #00ff88;
-        }
-
-        .signal.sell {
-            border-left-color: #ff4757;
-        }
-
-        .signal.hold {
-            border-left-color: #ffd700;
-        }
-
-        .entry-exit {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 1rem;
-            margin: 1rem 0;
-        }
-
-        .entry, .exit {
-            text-align: center;
-            padding: 1rem;
-            background: rgba(255, 255, 255, 0.05);
-            border-radius: 10px;
-            border: 1px solid rgba(255, 255, 255, 0.1);
-        }
-
-        .entry {
-            border-left: 4px solid #00ff88;
-        }
-
-        .exit {
-            border-left: 4px solid #ff4757;
-        }
-
-        .metrics {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
-            gap: 1rem;
-            margin: 1rem 0;
-        }
-
-        .metric {
-            text-align: center;
-            padding: 1rem;
-            background: rgba(255, 255, 255, 0.05);
-            border-radius: 10px;
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            transition: all 0.3s ease;
-        }
-
-        .metric:hover {
-            background: rgba(255, 255, 255, 0.1);
-            transform: scale(1.05);
-        }
-
-        .metric-value {
-            font-size: 1.5rem;
-            font-weight: 700;
-            margin: 0.5rem 0;
-        }
-
-        .metric-label {
-            font-size: 0.9rem;
-            opacity: 0.7;
-        }
-
-        .chart-container {
-            height: 400px;
-            background: rgba(255, 255, 255, 0.05);
-            border-radius: 15px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            margin: 1rem 0;
-            position: relative;
-            overflow: hidden;
-        }
-
-        .chart-placeholder {
-            font-size: 1.2rem;
-            opacity: 0.7;
-            text-align: center;
-        }
-
-        .live-indicator {
-            display: inline-flex;
-            align-items: center;
-            background: rgba(0, 255, 136, 0.1);
-            border: 1px solid #00ff88;
-            border-radius: 20px;
-            padding: 0.5rem 1rem;
-            font-size: 0.9rem;
-            margin-bottom: 1rem;
-        }
-
-        .live-dot {
-            width: 8px;
-            height: 8px;
-            background: #00ff88;
-            border-radius: 50%;
-            margin-right: 0.5rem;
-            animation: blink 1s ease-in-out infinite;
-        }
-
-        @keyframes blink {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0.3; }
-        }
-
-        .action-buttons {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 1rem;
-            margin: 2rem 0;
-        }
-
-        .btn {
-            padding: 1rem 2rem;
-            border: none;
-            border-radius: 10px;
-            font-size: 1.1rem;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-            position: relative;
-            overflow: hidden;
-        }
-
-        .btn::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: -100%;
-            width: 100%;
-            height: 100%;
-            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
-            transition: left 0.5s;
-        }
-
-        .btn:hover::before {
-            left: 100%;
-        }
-
-        .btn-buy {
-            background: linear-gradient(135deg, #00ff88, #00d4aa);
-            color: #000;
-        }
-
-        .btn-buy:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 10px 20px rgba(0, 255, 136, 0.3);
-        }
-
-        .btn-sell {
-            background: linear-gradient(135deg, #ff4757, #ff3742);
-            color: #fff;
-        }
-
-        .btn-sell:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 10px 20px rgba(255, 71, 87, 0.3);
-        }
-
-        .trading-volume {
-            margin: 1rem 0;
-        }
-
-        .volume-bar {
-            height: 8px;
-            background: rgba(255, 255, 255, 0.1);
-            border-radius: 4px;
-            overflow: hidden;
-            margin: 0.5rem 0;
-        }
-
-        .volume-fill {
-            height: 100%;
-            background: linear-gradient(90deg, #f7931e, #ffd700);
-            border-radius: 4px;
-            transition: width 1s ease;
-            animation: volume-pulse 2s ease-in-out infinite;
-        }
-
-        @keyframes volume-pulse {
-            0%, 100% { box-shadow: 0 0 5px rgba(247, 147, 30, 0.3); }
-            50% { box-shadow: 0 0 15px rgba(247, 147, 30, 0.6); }
-        }
-
-        .news-feed {
-            max-height: 300px;
-            overflow-y: auto;
-            margin: 1rem 0;
-        }
-
-        .news-item {
-            padding: 1rem;
-            background: rgba(255, 255, 255, 0.03);
-            border-radius: 10px;
-            margin: 0.5rem 0;
-            border-left: 3px solid #f7931e;
-            transition: all 0.3s ease;
-        }
-
-        .news-item:hover {
-            background: rgba(255, 255, 255, 0.08);
-            transform: translateX(5px);
-        }
-
-        .news-time {
-            font-size: 0.8rem;
-            opacity: 0.6;
-            margin-bottom: 0.5rem;
-        }
-
-        @media (max-width: 1200px) {
-            .dashboard {
-                grid-template-columns: 1fr;
-                gap: 1rem;
-                padding: 1rem;
-            }
-        }
-
-        .loading {
-            animation: loading-pulse 1.5s ease-in-out infinite;
-        }
-
-        @keyframes loading-pulse {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0.5; }
-        }
-    </style>
+  <meta charset="UTF-8">
+  <title>Bybit Trade Analyzer</title>
+  <style>
+    body {
+      background: linear-gradient(135deg, #111, #222);
+      color: white;
+      font-family: Arial, sans-serif;
+      margin: 0;
+      padding: 20px;
+    }
+    h1 { font-size: 24px; margin-bottom: 10px; }
+    .container { display: grid; grid-template-columns: 1fr 2fr 1fr; gap: 20px; }
+    .card {
+      background: #1e1e1e;
+      padding: 15px;
+      border-radius: 12px;
+      box-shadow: 0 0 10px #000;
+    }
+    input, button, select {
+      padding: 8px;
+      border-radius: 6px;
+      border: none;
+      margin: 4px 0;
+      width: 100%;
+    }
+    button { cursor: pointer; font-weight: bold; }
+    .btn-buy { background: green; color: white; }
+    .btn-sell { background: red; color: white; }
+    .btn-ai { background: purple; color: white; }
+    .price { font-size: 28px; font-weight: bold; margin: 10px 0; }
+    .log { max-height: 250px; overflow-y: auto; font-size: 12px; background: #111; padding: 10px; border-radius: 8px; }
+    .log div { margin-bottom: 6px; }
+  </style>
 </head>
 <body>
-    <div class="header">
-        <h1>🚀 Bybit AI Trading Dashboard</h1>
+  <h1>Bybit Trade Analyzer (HTML + CSS + JS)</h1>
+  
+  <div class="container">
+    <!-- Left panel -->
+    <div class="card">
+      <h3>Controls</h3>
+      <label>Symbol</label>
+      <select id="symbolSelect">
+        <option>BTCUSDT</option>
+        <option>ETHUSDT</option>
+        <option>SOLUSDT</option>
+      </select>
+      <label>Entry Price</label>
+      <input type="number" id="entryPrice" placeholder="Entry">
+      <label>Exit Price</label>
+      <input type="number" id="exitPrice" placeholder="Exit">
+      <label>Side</label>
+      <select id="side">
+        <option value="LONG">LONG</option>
+        <option value="SHORT">SHORT</option>
+      </select>
+      <label>Position Size (USD)</label>
+      <input type="number" id="sizeUSD" value="100">
+      
+      <button class="btn-buy" onclick="sendTrade('BUY')">Buy / Open</button>
+      <button class="btn-sell" onclick="sendTrade('SELL')">Sell / Close</button>
+      <button class="btn-ai" onclick="aiAnalyze()">AI Analyze</button>
     </div>
-
-    <div class="dashboard">
-        <!-- Left Panel: Trading Controls & Analysis -->
-        <div class="card">
-            <div class="live-indicator">
-                <div class="live-dot"></div>
-                LIVE TRADING
-            </div>
-
-            <div class="symbol-selector">
-                <select id="symbolSelect">
-                    <option value="BTCUSDT">BTC/USDT</option>
-                    <option value="ETHUSDT">ETH/USDT</option>
-                    <option value="BNBUSDT">BNB/USDT</option>
-                    <option value="XRPUSDT">XRP/USDT</option>
-                    <option value="ADAUSDT">ADA/USDT</option>
-                    <option value="SOLUSDT">SOL/USDT</option>
-                    <option value="DOGEUSDT">DOGE/USDT</option>
-                    <option value="DOTUSDT">DOT/USDT</option>
-                    <option value="AVAXUSDT">AVAX/USDT</option>
-                    <option value="LINKUSDT">LINK/USDT</option>
-                    <option value="MATICUSDT">MATIC/USDT</option>
-                    <option value="LTCUSDT">LTC/USDT</option>
-                    <option value="UNIUSDT">UNI/USDT</option>
-                    <option value="ATOMUSDT">ATOM/USDT</option>
-                    <option value="VETUSDT">VET/USDT</option>
-                </select>
-            </div>
-
-            <div class="ai-analysis">
-                <div class="ai-title">
-                    <svg class="ai-icon" viewBox="0 0 24 24" fill="#9333ea">
-                        <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
-                    </svg>
-                    <h3>AI Analysis</h3>
-                </div>
-                <div class="signal buy" id="aiSignal">
-                    <div>
-                        <strong>STRONG BUY</strong>
-                        <div style="font-size: 0.9rem; opacity: 0.8;">Confidence: 87%</div>
-                    </div>
-                    <div style="font-size: 1.5rem;">📈</div>
-                </div>
-            </div>
-
-            <div class="entry-exit">
-                <div class="entry">
-                    <div style="opacity: 0.7;">Entry Price</div>
-                    <div style="font-size: 1.3rem; color: #00ff88; font-weight: 700;" id="entryPrice">$95,240</div>
-                </div>
-                <div class="exit">
-                    <div style="opacity: 0.7;">Exit Target</div>
-                    <div style="font-size: 1.3rem; color: #ff4757; font-weight: 700;" id="exitPrice">$98,500</div>
-                </div>
-            </div>
-
-            <div class="action-buttons">
-                <button class="btn btn-buy" onclick="executeTrade('buy')">
-                    🟢 BUY
-                </button>
-                <button class="btn btn-sell" onclick="executeTrade('sell')">
-                    🔴 SELL
-                </button>
-            </div>
-
-            <div class="trading-volume">
-                <div style="display: flex; justify-content: space-between; align-items: center;">
-                    <span>24h Volume</span>
-                    <span id="volume24h">$2.4B</span>
-                </div>
-                <div class="volume-bar">
-                    <div class="volume-fill" style="width: 73%"></div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Center Panel: Price Chart & Main Data -->
-        <div class="card">
-            <div class="price-display">
-                <div class="live-indicator">
-                    <div class="live-dot"></div>
-                    REAL-TIME PRICE
-                </div>
-                <div class="price bullish" id="currentPrice">$95,847.32</div>
-                <div class="change" style="color: #00ff88;" id="priceChange">+$1,247.32 (+1.32%)</div>
-            </div>
-
-            <div class="chart-container">
-                <div class="chart-placeholder">
-                    <div>📊 Live Chart Integration</div>
-                    <div style="font-size: 1rem; margin-top: 1rem; opacity: 0.6;">
-                        Connect to Bybit WebSocket API for real-time candlestick data
-                    </div>
-                </div>
-            </div>
-
-            <div class="metrics">
-                <div class="metric">
-                    <div class="metric-value" style="color: #00ff88;" id="high24h">$96,250</div>
-                    <div class="metric-label">24h High</div>
-                </div>
-                <div class="metric">
-                    <div class="metric-value" style="color: #ff4757;" id="low24h">$93,180</div>
-                    <div class="metric-label">24h Low</div>
-                </div>
-                <div class="metric">
-                    <div class="metric-value" style="color: #ffd700;" id="rsi">67.3</div>
-                    <div class="metric-label">RSI</div>
-                </div>
-                <div class="metric">
-                    <div class="metric-value" style="color: #f7931e;" id="macd">+127.8</div>
-                    <div class="metric-label">MACD</div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Right Panel: Market News & Alerts -->
-        <div class="card">
-            <h3 style="margin-bottom: 1rem;">📰 Market News</h3>
-            <div class="news-feed">
-                <div class="news-item">
-                    <div class="news-time">5 mins ago</div>
-                    <div>Bitcoin breaks resistance at $95,500, targeting $98,000</div>
-                </div>
-                <div class="news-item">
-                    <div class="news-time">12 mins ago</div>
-                    <div>Institutional buying pressure increases by 23%</div>
-                </div>
-                <div class="news-item">
-                    <div class="news-time">18 mins ago</div>
-                    <div>Ethereum shows strong correlation with BTC movement</div>
-                </div>
-                <div class="news-item">
-                    <div class="news-time">25 mins ago</div>
-                    <div>Market sentiment: Extremely Bullish (85/100)</div>
-                </div>
-                <div class="news-item">
-                    <div class="news-time">32 mins ago</div>
-                    <div>Options flow indicates continued upward momentum</div>
-                </div>
-            </div>
-
-            <div style="margin-top: 2rem;">
-                <h3 style="margin-bottom: 1rem;">🔔 AI Alerts</h3>
-                <div class="signal buy">
-                    <div>
-                        <strong>Breakout Signal</strong>
-                        <div style="font-size: 0.9rem; opacity: 0.8;">Strong momentum detected</div>
-                    </div>
-                    <div>⚡</div>
-                </div>
-                <div class="signal hold" style="border-left-color: #ffd700;">
-                    <div>
-                        <strong>Support Level</strong>
-                        <div style="font-size: 0.9rem; opacity: 0.8;">$94,800 holding strong</div>
-                    </div>
-                    <div>🛡️</div>
-                </div>
-            </div>
-
-            <div style="margin-top: 2rem;">
-                <h3 style="margin-bottom: 1rem;">⚙️ Trading Stats</h3>
-                <div class="metrics">
-                    <div class="metric">
-                        <div class="metric-value" style="color: #00ff88;">+12.4%</div>
-                        <div class="metric-label">Win Rate</div>
-                    </div>
-                    <div class="metric">
-                        <div class="metric-value" style="color: #ffd700;">2.3:1</div>
-                        <div class="metric-label">R/R Ratio</div>
-                    </div>
-                </div>
-            </div>
-        </div>
+    
+    <!-- Middle panel -->
+    <div class="card">
+      <h3>Market</h3>
+      <div>Selected: <span id="selectedSymbol">BTCUSDT</span></div>
+      <div class="price" id="livePrice">--</div>
+      <div>Entry: <span id="entryShow">--</span> | Exit: <span id="exitShow">--</span></div>
+      <div id="aiResult"></div>
     </div>
-
-    <script>
-        // Simulated real-time data
-        const symbols = {
-            'BTCUSDT': { price: 95847.32, change: 1.32 },
-            'ETHUSDT': { price: 3421.67, change: 2.45 },
-            'BNBUSDT': { price: 678.92, change: -0.87 },
-            'XRPUSDT': { price: 0.6234, change: 3.21 },
-            'ADAUSDT': { price: 1.0823, change: 1.98 },
-            'SOLUSDT': { price: 234.56, change: 4.32 },
-            'DOGEUSDT': { price: 0.1847, change: -1.23 },
-            'DOTUSDT': { price: 18.94, change: 2.67 },
-            'AVAXUSDT': { price: 89.73, change: 1.89 },
-            'LINKUSDT': { price: 28.45, change: -0.56 },
-            'MATICUSDT': { price: 1.456, change: 3.44 },
-            'LTCUSDT': { price: 187.23, change: 0.98 },
-            'UNIUSDT': { price: 12.67, change: 2.11 },
-            'ATOMUSDT': { price: 15.89, change: -1.45 },
-            'VETUSDT': { price: 0.0789, change: 4.56 }
-        };
-
-        let currentSymbol = 'BTCUSDT';
-        let isUpdating = false;
-
-        // Real-time price updates
-        function updatePrice() {
-            if (isUpdating) return;
-            isUpdating = true;
-
-            const data = symbols[currentSymbol];
-            const variation = (Math.random() - 0.5) * 100;
-            const newPrice = data.price + variation;
-            const changePercent = ((newPrice - data.price) / data.price) * 100;
-
-            document.getElementById('currentPrice').textContent = `$${newPrice.toLocaleString('en-US', {
-                minimumFractionDigits: 2,
-                maximumFractionDigits: 2
-            })}`;
-
-            const priceElement = document.getElementById('currentPrice');
-            const changeElement = document.getElementById('priceChange');
-
-            if (changePercent > 0) {
-                priceElement.className = 'price bullish';
-                changeElement.style.color = '#00ff88';
-                changeElement.textContent = `+$${Math.abs(variation).toFixed(2)} (+${changePercent.toFixed(2)}%)`;
-            } else {
-                priceElement.className = 'price bearish';
-                changeElement.style.color = '#ff4757';
-                changeElement.textContent = `-$${Math.abs(variation).toFixed(2)} (${changePercent.toFixed(2)}%)`;
-            }
-
-            // Update entry and exit prices based on AI analysis
-            updateTradingPrices(newPrice);
-            updateAISignal();
-
-            isUpdating = false;
-        }
-
-        function updateTradingPrices(currentPrice) {
-            const entryPrice = currentPrice * 0.995; // 0.5% below current
-            const exitPrice = currentPrice * 1.035; // 3.5% above current
-
-            document.getElementById('entryPrice').textContent = `$${entryPrice.toLocaleString('en-US', {
-                minimumFractionDigits: 2,
-                maximumFractionDigits: 2
-            })}`;
-
-            document.getElementById('exitPrice').textContent = `$${exitPrice.toLocaleString('en-US', {
-                minimumFractionDigits: 2,
-                maximumFractionDigits: 2
-            })}`;
-        }
-
-        function updateAISignal() {
-            const signals = ['STRONG BUY', 'BUY', 'HOLD', 'SELL', 'STRONG SELL'];
-            const colors = ['buy', 'buy', 'hold', 'sell', 'sell'];
-            const confidence = Math.floor(Math.random() * 30) + 70; // 70-100%
-            const randomIndex = Math.floor(Math.random() * signals.length);
-
-            const signalElement = document.getElementById('aiSignal');
-            signalElement.className = `signal ${colors[randomIndex]}`;
-            signalElement.innerHTML = `
-                <div>
-                    <strong>${signals[randomIndex]}</strong>
-                    <div style="font-size: 0.9rem; opacity: 0.8;">Confidence: ${confidence}%</div>
-                </div>
-                <div style="font-size: 1.5rem;">${randomIndex < 2 ? '📈' : randomIndex < 3 ? '➡️' : '📉'}</div>
-            `;
-        }
-
-        function updateMetrics() {
-            const currentPrice = parseFloat(document.getElementById('currentPrice').textContent.replace(/[$,]/g, ''));
-            
-            document.getElementById('high24h').textContent = `$${(currentPrice * 1.025).toLocaleString('en-US', {
-                minimumFractionDigits: 2,
-                maximumFractionDigits: 2
-            })}`;
-
-            document.getElementById('low24h').textContent = `$${(currentPrice * 0.975).toLocaleString('en-US', {
-                minimumFractionDigits: 2,
-                maximumFractionDigits: 2
-            })}`;
-
-            document.getElementById('rsi').textContent = (Math.random() * 40 + 30).toFixed(1);
-            document.getElementById('macd').textContent = (Math.random() * 200 - 100).toFixed(1);
-        }
-
-        // Symbol selector change
-        document.getElementById('symbolSelect').addEventListener('change', function(e) {
-            currentSymbol = e.target.value;
-            const data = symbols[currentSymbol];
-            
-            // Update immediately with new symbol data
-            document.getElementById('currentPrice').textContent = `$${data.price.toLocaleString('en-US', {
-                minimumFractionDigits: 2,
-                maximumFractionDigits: 2
-            })}`;
-
-            const changeElement = document.getElementById('priceChange');
-            const priceElement = document.getElementById('currentPrice');
-
-            if (data.change > 0) {
-                priceElement.className = 'price bullish';
-                changeElement.style.color = '#00ff88';
-                changeElement.textContent = `+${data.change.toFixed(2)}%`;
-            } else {
-                priceElement.className = 'price bearish';
-                changeElement.style.color = '#ff4757';
-                changeElement.textContent = `${data.change.toFixed(2)}%`;
-            }
-
-            updateTradingPrices(data.price);
-            updateMetrics();
-        });
-
-        // Trade execution
-        function executeTrade(type) {
-            const button = document.querySelector(`.btn-${type}`);
-            const originalText = button.textContent;
-            
-            button.textContent = type === 'buy' ? '🟢 BUYING...' : '🔴 SELLING...';
-            button.style.transform = 'scale(0.95)';
-            button.disabled = true;
-
-            setTimeout(() => {
-                button.textContent = type === 'buy' ? '✅ BOUGHT!' : '✅ SOLD!';
-                
-                setTimeout(() => {
-                    button.textContent = originalText;
-                    button.style.transform = 'scale(1)';
-                    button.disabled = false;
-                }, 2000);
-            }, 1500);
-
-            // Simulate trade notification
-            showNotification(`${type.toUpperCase()} order executed for ${currentSymbol}`, 'success');
-        }
-
-        function showNotification(message, type) {
-            const notification = document.createElement('div');
-            notification.style.cssText = `
-                position: fixed;
-                top: 20px;
-                right: 20px;
-                background: ${type === 'success' ? 'rgba(0, 255, 136, 0.1)' : 'rgba(255, 71, 87, 0.1)'};
-                border: 1px solid ${type === 'success' ? '#00ff88' : '#ff4757'};
-                color: ${type === 'success' ? '#00ff88' : '#ff4757'};
-                padding: 1rem 2rem;
-                border-radius: 10px;
-                backdrop-filter: blur(20px);
-                z-index: 10000;
-                animation: slideIn 0.3s ease;
-            `;
-            notification.textContent = message;
-
-            document.body.appendChild(notification);
-
-            setTimeout(() => {
-                notification.style.animation = 'slideOut 0.3s ease forwards';
-                setTimeout(() => document.body.removeChild(notification), 300);
-            }, 3000);
-        }
-
-        // Add CSS animations for notifications
-        const style = document.createElement('style');
-        style.textContent = `
-            @keyframes slideIn {
-                from { transform: translateX(100%); opacity: 0; }
-                to { transform: translateX(0); opacity: 1; }
-            }
-            @keyframes slideOut {
-                from { transform: translateX(0); opacity: 1; }
-                to { transform: translateX(100%); opacity: 0; }
-            }
-        `;
-        document.head.appendChild(style);
-
-        // Advanced AI Analysis Functions
-        function generateAIInsights() {
-            const insights = [
-                "Strong bullish momentum detected across multiple timeframes",
-                "RSI indicates potential continuation pattern forming",
-                "Volume profile suggests institutional accumulation",
-                "Fibonacci retracement levels providing strong support",
-                "Moving averages aligned for upward momentum",
-                "Market sentiment shifting to extreme greed territory",
-                "Options flow indicating bullish positioning",
-                "On-chain metrics showing reduced selling pressure"
-            ];
-            
-            return insights[Math.floor(Math.random() * insights.length)];
-        }
-
-        function updateNewsFeeds() {
-            const newsItems = [
-                "Bitcoin ETF inflows reach new monthly high",
-                "Major institutional adoption announcement expected",
-                "Technical analysis points to continued bullish trend",
-                "Whale activity increases significantly in past hour",
-                "Market correlation decreases, indicating strength",
-                "Funding rates turn positive across major exchanges",
-                "Social sentiment reaches 3-month high",
-                "Developer activity increases on major protocols"
-            ];
-
-            const newsContainer = document.querySelector('.news-feed');
-            const items = newsContainer.querySelectorAll('.news-item');
-            
-            // Update news items every 30 seconds
-            if (items.length > 0) {
-                const randomIndex = Math.floor(Math.random() * newsItems.length);
-                const randomItem = Math.floor(Math.random() * items.length);
-                const timeNow = new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
-                
-                items[randomItem].innerHTML = `
-                    <div class="news-time">${Math.floor(Math.random() * 60)} mins ago</div>
-                    <div>${newsItems[randomIndex]}</div>
-                `;
-            }
-        }
-
-        // Risk Management Calculator
-        function calculateRiskReward(entryPrice, exitPrice, stopLoss) {
-            const profit = exitPrice - entryPrice;
-            const loss = entryPrice - stopLoss;
-            return loss > 0 ? (profit / loss).toFixed(2) : 'N/A';
-        }
-
-        // Technical Indicators Updates
-        function updateTechnicalIndicators() {
-            // RSI calculation simulation
-            const rsi = Math.random() * 100;
-            let rsiColor = '#ffd700';
-            if (rsi > 70) rsiColor = '#ff4757'; // Overbought
-            if (rsi < 30) rsiColor = '#00ff88'; // Oversold
-            
-            document.getElementById('rsi').textContent = rsi.toFixed(1);
-            document.getElementById('rsi').style.color = rsiColor;
-
-            // MACD simulation
-            const macd = (Math.random() - 0.5) * 500;
-            document.getElementById('macd').style.color = macd > 0 ? '#00ff88' : '#ff4757';
-            document.getElementById('macd').textContent = macd > 0 ? `+${macd.toFixed(1)}` : macd.toFixed(1);
-        }
-
-        // WebSocket simulation for real-time data
-        function simulateWebSocketData() {
-            const wsData = {
-                symbol: currentSymbol,
-                price: parseFloat(document.getElementById('currentPrice').textContent.replace(/[$,]/g, '')),
-                volume: Math.random() * 1000000000,
-                trades: Math.floor(Math.random() * 10000),
-                timestamp: Date.now()
-            };
-            
-            // Update volume display
-            const volumeDisplay = document.getElementById('volume24h');
-            volumeDisplay.textContent = `${(wsData.volume / 1000000).toFixed(1)}M`;
-            
-            // Update volume bar
-            const volumeBar = document.querySelector('.volume-fill');
-            const volumePercentage = Math.min((wsData.volume / 5000000000) * 100, 100);
-            volumeBar.style.width = `${volumePercentage}%`;
-            
-            return wsData;
-        }
-
-        // Portfolio tracking simulation
-        const portfolio = {
-            totalValue: 50000,
-            pnl: 2847.32,
-            positions: 3,
-            winRate: 73.2
-        };
-
-        function updatePortfolioStats() {
-            // Simulate portfolio changes
-            portfolio.pnl += (Math.random() - 0.5) * 100;
-            portfolio.totalValue += (Math.random() - 0.5) * 500;
-            
-            // Update win rate display if it exists
-            const winRateElement = document.querySelector('.metric-value');
-            if (winRateElement && winRateElement.textContent.includes('%')) {
-                portfolio.winRate += (Math.random() - 0.5) * 2;
-                winRateElement.textContent = `${Math.max(0, Math.min(100, portfolio.winRate)).toFixed(1)}%`;
-            }
-        }
-
-        // Advanced order types simulation
-        const orderTypes = ['Market', 'Limit', 'Stop-Loss', 'Take-Profit', 'OCO'];
-        let activeOrders = [];
-
-        function createOrder(type, price, amount) {
-            const order = {
-                id: Date.now(),
-                type: type,
-                symbol: currentSymbol,
-                price: price,
-                amount: amount,
-                status: 'Pending',
-                timestamp: new Date().toISOString()
-            };
-            
-            activeOrders.push(order);
-            return order;
-        }
-
-        // Market depth simulation
-        function generateOrderBook() {
-            const currentPrice = parseFloat(document.getElementById('currentPrice').textContent.replace(/[$,]/g, ''));
-            const orderBook = {
-                bids: [],
-                asks: []
-            };
-            
-            // Generate bids (buy orders)
-            for (let i = 0; i < 10; i++) {
-                orderBook.bids.push({
-                    price: currentPrice - (i + 1) * (currentPrice * 0.001),
-                    amount: Math.random() * 10
-                });
-            }
-            
-            // Generate asks (sell orders)  
-            for (let i = 0; i < 10; i++) {
-                orderBook.asks.push({
-                    price: currentPrice + (i + 1) * (currentPrice * 0.001),
-                    amount: Math.random() * 10
-                });
-            }
-            
-            return orderBook;
-        }
-
-        // Alert system
-        const alerts = [];
-
-        function createAlert(condition, message, type = 'info') {
-            const alert = {
-                id: Date.now(),
-                condition: condition,
-                message: message,
-                type: type,
-                triggered: false,
-                timestamp: new Date().toISOString()
-            };
-            
-            alerts.push(alert);
-            return alert;
-        }
-
-        function checkAlerts() {
-            const currentPrice = parseFloat(document.getElementById('currentPrice').textContent.replace(/[$,]/g, ''));
-            
-            alerts.forEach(alert => {
-                if (!alert.triggered && eval(alert.condition.replace('PRICE', currentPrice))) {
-                    showNotification(alert.message, alert.type);
-                    alert.triggered = true;
-                }
-            });
-        }
-
-        // Performance metrics
-        const performanceMetrics = {
-            sharpeRatio: 1.85,
-            maxDrawdown: -8.2,
-            totalTrades: 847,
-            profitableTrades: 621,
-            averageWin: 2.3,
-            averageLoss: -1.1
-        };
-
-        // Market scanner simulation
-        function scanMarkets() {
-            const scanResults = [];
-            Object.keys(symbols).forEach(symbol => {
-                const data = symbols[symbol];
-                const momentum = Math.random() * 10 - 5;
-                const volume = Math.random() * 100;
-                
-                scanResults.push({
-                    symbol: symbol,
-                    price: data.price,
-                    change: data.change,
-                    momentum: momentum,
-                    volume: volume,
-                    signal: momentum > 2 ? 'BUY' : momentum < -2 ? 'SELL' : 'HOLD'
-                });
-            });
-            
-            return scanResults.sort((a, b) => Math.abs(b.momentum) - Math.abs(a.momentum));
-        }
-
-        // Initialize intervals for real-time updates
-        setInterval(updatePrice, 2000); // Update price every 2 seconds
-        setInterval(updateTechnicalIndicators, 5000); // Update indicators every 5 seconds
-        setInterval(updateMetrics, 3000); // Update metrics every 3 seconds
-        setInterval(updateNewsFeeds, 30000); // Update news every 30 seconds
-        setInterval(simulateWebSocketData, 1000); // Simulate WebSocket data every second
-        setInterval(updatePortfolioStats, 10000); // Update portfolio every 10 seconds
-        setInterval(checkAlerts, 2000); // Check alerts every 2 seconds
-
-        // Initialize default alerts
-        createAlert('PRICE > 96000', 'Bitcoin broke above $96,000!', 'success');
-        createAlert('PRICE < 94000', 'Bitcoin dropped below $94,000!', 'warning');
-
-        // Keyboard shortcuts
-        document.addEventListener('keydown', function(e) {
-            if (e.ctrlKey || e.metaKey) {
-                switch(e.key) {
-                    case 'b':
-                        e.preventDefault();
-                        executeTrade('buy');
-                        break;
-                    case 's':
-                        e.preventDefault();
-                        executeTrade('sell');
-                        break;
-                    case 'r':
-                        e.preventDefault();
-                        location.reload();
-                        break;
-                }
-            }
-        });
-
-        // Initialize the dashboard
-        document.addEventListener('DOMContentLoaded', function() {
-            updatePrice();
-            updateTechnicalIndicators();
-            updateMetrics();
-            simulateWebSocketData();
-            
-            // Add welcome message
-            setTimeout(() => {
-                showNotification('🚀 AI Trading Dashboard Initialized - Real-time data active!', 'success');
-            }, 1000);
-            
-            console.log('🚀 Bybit AI Trading Dashboard Loaded');
-            console.log('📊 Real-time data streaming active');
-            console.log('🤖 AI analysis engine online');
-            console.log('⌨️ Keyboard shortcuts: Ctrl+B (Buy), Ctrl+S (Sell), Ctrl+R (Refresh)');
-        });
-    </script>
+    
+    <!-- Right panel -->
+    <div class="card">
+      <h3>Activity Log</h3>
+      <div class="log" id="logBox"></div>
+    </div>
+  </div>
+  
+  <script>
+    const logBox = document.getElementById("logBox");
+    const livePriceEl = document.getElementById("livePrice");
+    const entryInput = document.getElementById("entryPrice");
+    const exitInput = document.getElementById("exitPrice");
+    const symbolSelect = document.getElementById("symbolSelect");
+    const entryShow = document.getElementById("entryShow");
+    const exitShow = document.getElementById("exitShow");
+    const aiResult = document.getElementById("aiResult");
+    const selectedSymbolEl = document.getElementById("selectedSymbol");
+    
+    let price = 0;
+    
+    function log(msg) {
+      const el = document.createElement("div");
+      el.textContent = new Date().toLocaleTimeString() + " — " + msg;
+      logBox.prepend(el);
+    }
+    
+    function updatePrice(newPrice) {
+      price = newPrice;
+      livePriceEl.textContent = price.toFixed(2);
+      
+      const entry = parseFloat(entryInput.value);
+      const exit = parseFloat(exitInput.value);
+      entryShow.textContent = entry || "--";
+      exitShow.textContent = exit || "--";
+      
+      if (entry && price >= entry) log(`🚀 Entry hit at ${entry}`);
+      if (exit && price >= exit) log(`💰 Exit hit at ${exit}`);
+    }
+    
+    // Fake random price updates (replace with Bybit WebSocket for real data)
+    setInterval(() => {
+      updatePrice(50000 + Math.random() * 1000); // simulate BTC price
+    }, 2000);
+    
+    function sendTrade(side) {
+      log(`${side} request for ${symbolSelect.value} @ ${price}`);
+      // In real use: fetch('/api/trade', {method:'POST', body:JSON.stringify({...})})
+    }
+    
+    function aiAnalyze() {
+      log("AI Analyze request...");
+      // In real use: call backend
+      aiResult.textContent = "AI suggests HOLD / Adjust stop-loss 🚨 (mock)";
+    }
+    
+    symbolSelect.addEventListener("change", () => {
+      selectedSymbolEl.textContent = symbolSelect.value;
+      log("Symbol changed to " + symbolSelect.value);
+    });
+  </script>
 </body>
 </html>
